@@ -1,4 +1,4 @@
 # LogicLights
 Contains Source Code for the Logic Lights Game
 
-The game uses Python 2.7.1 and PyGame.
+The game was written in Python 2.7.1 with PyGame.
