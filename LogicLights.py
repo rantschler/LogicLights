@@ -10,7 +10,7 @@
 # PACKAGES 
 #
 
-import random
+import random,math
 from LogicGates  import *
 from pygame.locals import *
 import pygame as pg
@@ -37,7 +37,73 @@ YELLOW = (255,255,0)
 # CLASSES
 #
 
-
+class Wingding:
+    
+    def __init__(self,position):
+        
+        self.x = float(position[0])
+        self.y = float(position[1])
+        self.angle = random.random() * 2 * math.pi
+        self.rotation = random.random() * 0.4 - 0.2
+        
+        self.sides = random.choice([3,4,5,6,8])
+        self.create_rotations()
+        
+        self.radius = random.choice([5,7,10,15,5,7,10,5,7,5,7,5,5,5])
+        
+        self.vx = (random.random()*2.0 - 1.0) * 15.0 / float(self.radius)
+        self.vy = (random.random()*2.0 - 1.0) * 15.0 / float(self.radius)
+        
+        self.color = (random.choice(range(255)),
+                        random.choice(range(255)),
+                        random.choice(range(255)))
+        
+    def update(self):
+        
+        self.x += self.vx
+        self.y += self.vy
+        self.angle += self.rotation
+    
+    def create_rotations(self):
+        
+        angle = 2 * math.pi / float(self.sides)
+        
+        self.rot = [[0.0,0.0],[0.0,0.0]]
+        
+        self.rot[0][0] = math.cos(angle)
+        self.rot[1][1] = self.rot[0][0]
+        self.rot[1][0] = math.sin(angle)
+        self.rot[0][1] = -1.0 * self.rot[1][0]
+    
+    def draw(self,screen):
+        
+        x0 = float(self.radius) * math.cos(self.angle)
+        y0 = float(self.radius) * math.sin(self.angle)
+        
+        pos = []
+        pos.append([x0,y0])
+        for application in range(self.sides-1):
+            x0 = pos[-1][0] * self.rot[0][0]
+            x0 += pos[-1][1] * self.rot[0][1]
+            y0 = pos[-1][0] * self.rot[1][0]
+            y0 += pos[-1][1] * self.rot[1][1]
+            pos.append([x0,y0])
+            
+        for point in pos:
+            point[0] += self.x
+            point[1] += self.y
+            point[0] = int(point[0])
+            point[1] = int(point[1])
+            
+        pg.draw.polygon(screen,self.color,pos)
+    
+    def draw2(self,screen):
+        
+        pos = (int(self.x),int(self.y))
+        
+        pg.draw.circle(screen,self.color,pos,self.radius)
+        
+    
 class Scrollbar:
     """ Scrolls up and down so user can choose the puzzle to play. """
     
@@ -997,196 +1063,7 @@ class Garbage:
         pg.draw.rect(screen,self.color,(self.x,self.y,self.w,self.h),1)
         screenprint(screen,"TRASH",(self.x+5,self.y+self.h//3))
 
-#
-# From Gameclass
-#
-class Field:
-    
-    def __init__(self,dimensions,size = 1.0,offset = [0.0,0.0]):
-        """ 
-        Initializes the playing area.  
-            
-            dimensions - a two element list or tuple that defines the 
-                <<physical>> size of the playing area.
-            size - a float from 0.0 to 1.0 that indicates the percentage of
-                the width of the screen that a static field occupies.
-            offset - a two element list or tuple that gives the position of
-                the upper left hand corner as a percentage of available screen.
-        """
-        
-        self.width = float(dimensions[0])
-        self.height = float(dimensions[1])
-        
-        self.scale = 1.0
-        
-        if 0 < size < 1:
-            self.percent = size
-        else:
-            self.percent = 1.0
-            
-        if 0 < offset[0] < 1.0 - self.percent:
-            self.x_pct = offset[0]
-        else:
-            self.x_pct = 0.0  
-            
-        if 0 < offset[1] < 1:
-            self.y_pct = offset[1]
-        else:
-            self.y_pct = 0.0
-        
-        pass 
-    
-    def get_size(self):
-        """ Returns width and height of the field in meters. """
-        
-        return (self.width,self.height)
-    
-    def get_fill(self):
-        """ Returns the percentage of the screen that the field is
-            expected to fill.  Reported relative to the widths. """
-            
-        return self.percent
-    
-    def get_offset(self):
-        """ Returns the percentage of the screen to the top-left 
-            corner of the field.  Both component are reported. """ 
-            
-        return (self.x_pct,self.y_pct)
-    
-    def get_edges(self):
-        """ Returns the edges of the field in its own terms. """
-        
-        edge1 = [0,0]
-        edge2 = self.get_size()
-        
-        return edges
-        
-    def contains(self,thing):
-        
-        pos = thing.get_position()
-        
-        in_x = 0.0 <= pos[0] <= self.width
-        in_y = 0.0 <= pos[1] <= self.height
-        
-        return in_x and in_y
-        
-        
-    def imprint(self,art_function,background,additional = False):
-        """ Imprints art_function on the background of the screen. 
-            Requires a function that draws the background, which
-                is drawn onto the background and does not change
-                unless the imprint() method is called again. """
-        
-        if additional:
-            art_function(self,background,additional)
-        else:
-            art_function(self,background)
-    
-        pass
-        
-class Background:
-    """ A modifiable background object that can be drawn on during the
-        operation of the game.  """
-        
-    def __init__(self,screen_size,color = BLACK):
-            
-        self.color = color
-        self.base = pg.Surface(screen_size)
-        self.base.convert()
-        self.base.fill(color)
-        
-        self.scale = 1.0
-        self.offset = (0.0,0.0)
-        
-        pass
-    
-    def get_size(self):
-        """ Returns the size of the background image. """
-        
-        return self.base.get_size()
-    
-    def set_scale(self,value):
-        
-        self.scale = value
-        
-        pass
-        
-    def set_offset(self,value):
-        
-        self.offset = value
-        
-        pass
-    
-    def get_scale(self):
-        
-        return self.scale
-        
-    def get_offset(self):
-        
-        return self.offset
-    
-    def resize(self,size):
-
-        self.base = pygame.Surface(size)
-        self.base.convert()
-        self.base.fill(self.color)
-        
-        pass
-    
-           
-    def clear(self):
-        """ Blanks out the background to be its currently assigned 
-            background color. """
-            
-        self.base.fill(self.color)
-        
-        pass
-    
-    def fill(self,color):
-        """ Fills the background with the given color and sets that
-            color as the new background color for other operations. """
-            
-        self.color = color
-        self.base.fill(color)
-        
-        pass
-        
-    def detail(self,detail,position):
-        """ Overlays a picture on top of the current background. """
-        
-        self.base.blit(detail,position)
-        
-        pass
-        
-    def draw(self,screen):
-        """ Draws the background. """
-        
-        screen.blit(self.base,(0,0))
-        
-        pass
-
-def screenprint(screen = None,message="",position = [0,0],size = 20,color = WHITE,font = "Arial"):
-    ''' Prints a message on the PyGame screen. 
-            screen - the PyGame object on which to place text
-            message - the string object to print on the screen
-            positon - a two-element list of integers describing where to
-                        print the message on the screen
-            size - an integer representing the size of text to print
-            color - a PyGame color or a gameclass color constant
-            font - a string representing the font to print on the screen  
-    '''
-
-    position = (int(position[0]),int(position[1]))
-    
-    message = str(message)
-    
-    outputfont = pg.font.SysFont(font,size)
-    outputmessage = outputfont.render(message,1,color)
-    
-    if screen:
-        screen.blit(outputmessage,position)
-        
-    return outputmessage
+     
 
 #
 # FUNCTIONS
@@ -1333,24 +1210,31 @@ def find_file(name):
     
     return n
 
+
+
+def mix_colors(color1,color2,percent):
+    
+    if percent < 0.0:
+        
+        percent = 0.0
+    
+    elif percent > 1.0:
+        
+        percent = 1.0
+    
+    dR = color2[0] - color1[0]
+    dG = color2[1] - color1[1]
+    dB = color2[2] - color1[2]
+    
+    new_R = int(color1[0] + float(dR) * percent)
+    new_G = int(color1[1] + float(dG) * percent)
+    new_B = int(color1[2] + float(dB) * percent)
+    
+    return ( new_R , new_G , new_B )
+
 # 
 # MVC FUNCTIONS
 #
-
-def engine(interval = 0,field = None,avatar = None,objects = []):
-    ''' 
-    The engine models the physics of your game by updating object
-    positions, checking for collisions, and resolving them. 
-    
-        
-        interval - time from last engine() call
-        field - the field object that defines the playing area
-        avatar - the player object
-        objects - anything the avatar can interact with
-                -or- another object can interact with.
-    '''
-    
-    return None
 
 def view(screen,background,avatar = None,things = [],foreground = None):
     ''' The view function draws things to the screen. 
@@ -1364,9 +1248,7 @@ def view(screen,background,avatar = None,things = [],foreground = None):
                     objects.
     '''
     
-    background.draw(screen)
-    scale = background.get_scale()
-    offset = background.get_offset()
+    screen.blit(background,(0,0))
     
     #
     # Draw all objects below.
@@ -1404,16 +1286,6 @@ def view(screen,background,avatar = None,things = [],foreground = None):
     
     pass
     
-def control(events,avatar = None, buttons = None):
-    ''' Evaluates player input and sends messages to the avatar. 
-    
-        events - The pygame event list.
-        avatar - The player object.
-        buttons - A list of buttons that can directly control the avatar.
-    '''
-
-    pass
-    
 #
 # SCREENS
 #
@@ -1426,14 +1298,17 @@ def login(screen):
     
     screen_size = screen.get_size()
     
-    background = Background(screen.get_size(),BLACK)
+    background = pg.Surface(screen_size)
+    background.convert()
+    background.fill(BLACK)
+    
     while not ready :
         
         
         x = screen_size[0] // 2 - 50
         y = screen_size[1] // 4
         
-        background.draw(screen)
+        screen.blit(background,(0,0))
         
         screenprint(screen,"Logic Lights",(x,y),36,YELLOW)
             
@@ -1508,19 +1383,20 @@ def retire(screen,player):
     
     player.mark_loss()
     
-    background = Background(screen.get_size(),BLACK)
+    background = screen
+    screen_size = screen.get_size()
+    
     clock = pg.time.Clock()
+    
     while wait and time < limit:
         
         time += clock.tick(30)
         
-        screen_size = screen.get_size()
+        screen.blit(background,(0,0))
         
         x = screen_size[0] // 2 - 50
         y = screen_size[1] // 4
         
-        
-        #background.draw(screen)
         for n in range(4):
             
             x0 , y0 = shift_to_corner((x,y),n)
@@ -1545,45 +1421,60 @@ def retire(screen,player):
         for event in events:
             if event.type == QUIT:
                 exit()
-            if event.type == VIDEORESIZE:
-                new_size = event.size
-                screen = pg.display.set_mode(new_size,RESIZABLE,32)
-                background.resize(new_size)
-                field.imprint(draw_field,background)
+                
+                
             if event.type == MOUSEBUTTONDOWN or event.type == KEYDOWN:
                 
                 wait = False
 
 def win(screen,player):
     """ Creates the winning screen. """
+    
+    
     time = 0
     limit = 5000
     wait = True
     
+    wingdings = []
+    old_clock = 470
+    
     player.mark_win()
     if player.in_tutorial():
         player.advance_tutorial()
+    
+    background = pg.Surface(screen.get_size())
+    background.blit(screen,(0,0))
+    
+    screen_size = screen.get_size()
         
-    background = Background(screen.get_size(),BLACK)
+    
     clock = pg.time.Clock()
-    while wait and time < limit:
+    while wait:
         
         time += clock.tick(30)
+        new_clock = time % 500
         
-        screen_size = screen.get_size()
+        if new_clock > old_clock:
+            wingdings.append(Wingding(pg.mouse.get_pos()))
         
+        for wingding in wingdings:
+            wingding.update()
+            
+        screen.blit(background,(0,0))
+            
         x = screen_size[0] // 2 - 50
         y = screen_size[1] // 4
         
-        
-        #background.draw(screen)
         for n in range(4):
             
             x0 , y0 = shift_to_corner((x,y),n)
                 
             screenprint(screen,"Logic Lights",(x0,y0),36,BLACK)
         
-        screenprint(screen,"Logic Lights",(x,y),36,YELLOW)
+        yellow_mix = mix_colors(BLACK, YELLOW, float(time) / 1000.0)
+        white_mix = mix_colors(BLACK, WHITE, float(time) / 1000.0)
+        
+        screenprint(screen,"Logic Lights",(x,y),36,yellow_mix)
         
         x += 12
         y += 150
@@ -1593,19 +1484,20 @@ def win(screen,player):
                 
             screenprint(screen,"You Win!",(x,y),36,BLACK)
                 
-        screenprint(screen,"You Win!",(x,y),36,WHITE)
+        screenprint(screen,"You Win!",(x,y),36,white_mix)
+       
+        for wingding in wingdings:
+            wingding.draw(screen)
        
         pg.display.update()
         
         events = pg.event.get()
         for event in events:
+            
             if event.type == QUIT:
+                
                 exit()
-            if event.type == VIDEORESIZE:
-                new_size = event.size
-                screen = pg.display.set_mode(new_size,RESIZABLE,32)
-                background.resize(new_size)
-                field.imprint(draw_field,background)
+                
             if event.type == MOUSEBUTTONDOWN or event.type == KEYDOWN:
                 
                 wait = False
@@ -1621,7 +1513,9 @@ def splash(screen,player):
     level = 3
     puzzle = random.choice(range(4**3))
     
-    background = Background(screen.get_size(),BLACK)
+    background = pg.Surface(screen.get_size())
+    background.convert()
+    background.fill(BLACK)
     
     box = 0
         
@@ -1636,7 +1530,7 @@ def splash(screen,player):
         x = screen_size[0] // 2 - 50
         y = screen_size[1] // 4
         
-        background.draw(screen)
+        screen.blit(background,(0,0))
         screenprint(screen,"Player: " + name)
         screenprint(screen,"Logout",(840,0))
         screenprint(screen,"Logic Lights",(x,y),36,YELLOW)
@@ -1700,12 +1594,9 @@ def game(screen,player):
     # Initialize screen and clock
     #
     
-    background = Background(screen.get_size(),BLACK)
-    field_size = (80.0,60.0)
-    field_scale = 0.5
-    field_offset = (0.0,0.0)
-    field = gc.Field(field_size,field_scale,field_offset)
-    field.imprint(draw_field,background)
+    background = pg.Surface(screen.get_size())
+    background.convert()
+    background.fill(BLACK)
     
     clock = pg.time.Clock()
     
@@ -1808,23 +1699,12 @@ def game(screen,player):
         interval = clock.tick(30)
         
         #
-        # Model: All game mechanics
-        ## Send physics problems to the engine.
-        ## Resolve other mechanics (scoring, etc) here or in
-        ## other functions
-        #
-        
-        result = engine(interval,field)
-        
-        #
         # View: Draw all objects
         ## Send objects to the view function.
         #
         
         things = buttons + program + factories + lights + wires + [garbage]
         view(screen,background,player,things)
-        
-        
         
         #
         # Control: Take input from the user.
@@ -2063,7 +1943,7 @@ def main():
     #
     
     screen_size = (900,600)
-    screen = pg.display.set_mode(screen_size,RESIZABLE,32)
+    screen = pg.display.set_mode(screen_size,False,32)
     
     user = login(screen)
     

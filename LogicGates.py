@@ -645,7 +645,7 @@ class LogicOr(Logic3Terminal):
         self.w = WIDTH * SCALE
         self.h = HEIGHT * SCALE
         
-        self.symbol = draw_or()
+        self.symbol = draw_or2()
     
     def gate_type(self):
         
@@ -1230,6 +1230,59 @@ def draw_or():
         
     pg.draw.arc(container,GRAY,(arc_corner,small_arc),0.3,1.575,23)
     pg.draw.arc(container,GRAY,(other_corner,small_arc),4.705,5.98,23)
+        
+    pg.draw.circle(container,BLACK,blackout_center,radius)
+    
+    pg.draw.line(container,GRAY,start,center,3)
+    pg.draw.line(container,GRAY,top_lead,top_end,3)
+    pg.draw.line(container,GRAY,bottom_lead,bottom_end,3)
+    
+    container.set_colorkey((0,0,0))
+    
+    return container
+    
+def draw_or2():
+    """ Draws out the Or gate and saves it as a transparent picture for
+        blitting.
+    """
+    
+    size = ( WIDTH * SCALE , HEIGHT * SCALE )
+    position = ( 0 , 0 )
+    center = ( size[0] // 2 , size[1] // 2 )
+    
+    container = pg.Surface(size)
+    
+    radius = size[1]*5//9
+    light_radius = radius - 4
+    
+    side_center = (center[0] + size[0] // 9, center[1])
+    arc_corner = (position[0] + size[0] //9 - 3, position[1])
+    other_corner = (arc_corner[0],position[1] - size[1] //2) 
+    arc_corner2 = (arc_corner[0]+3, arc_corner[1]+2)
+    other_corner2 = (other_corner [0]+3,other_corner[1] -2)    
+    
+    blackout_center = (position[0] + size[0]//9,center[1])
+    
+        
+    corner = (position[0] + 2 * size[0] // 9,position[1])  
+    internal_corner = ( corner[0] + 3 , corner[1] + 3 )
+    square_size = (size[1] // 2 ,size[1])
+    arc_size = (size[1] * 10 ** 0.5 // 2, size[1] * 3 // 2)
+    small_size = (size[1] - 8 , size[1]-6)
+    small_arc = (arc_size[1] - 3 , arc_size[1]-3)    
+    start = (position[0]+size[0],center[1])
+    top_lead = (position[0],center[1] + size[1] // 4 )
+    bottom_lead = (position[0],center[1] - size[1] // 4)
+    top_end = (center[0],top_lead[1])
+    bottom_end = (center[0],bottom_lead[1])
+    
+    
+    
+    pg.draw.rect(container,GRAY,(corner,square_size))
+     
+    pg.draw.arc(container,GRAY,(arc_corner,arc_size),0.3,1.575,23)
+    pg.draw.arc(container,GRAY,(other_corner,arc_size),4.705,5.98,23)
+        
         
     pg.draw.circle(container,BLACK,blackout_center,radius)
     
