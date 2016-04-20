@@ -12,6 +12,27 @@ GRAY = (128,128,128)
 BLACK = (0,0,0)
 WHITE = (255,255,255)
 YELLOW = (255,255,0)
+GREEN = (0,128,0)
+
+
+COLOR1 = GRAY
+COLOR2 = DARK_GRAY
+COLOR3 = GRAY
+LIGHT_ON = YELLOW
+LIGHT_OFF = DARK_GRAY
+
+LETTER_ON = BLACK
+LETTER_OFF = BLACK
+
+## COLOR1 = GREEN
+## COLOR2 = BLACK
+## COLOR3 = GREEN
+
+## LIGHT_ON = YELLOW
+## LIGHT_OFF = BLACK
+
+## LETTER_ON = BLACK
+## LETTER_OFF = WHITE
 
 class Pad:
     """ Terminal object that connects a logic gate to a wire. """
@@ -29,7 +50,7 @@ class Pad:
         else:
             self.connector = None
         
-        self.color = GRAY
+        self.color = COLOR3
         
         self.type = type
         
@@ -88,12 +109,16 @@ class Pad:
 
             return None
     
-    def disconnect(self):
+    def disconnect(self,connected = None):
         """ Remove the wire from the terminal, returns the wire. """
         
         if self.type == "Output":
             
-            wire = self.connector[0]
+            if connected:
+                wire = connected
+            else:
+                wire = self.connector[0]
+            
             self.connector.remove(wire)
         
         else:
@@ -102,7 +127,7 @@ class Pad:
             self.connector = None
         
         wire.disconnect(self)
-        
+
         
         return wire
         
@@ -390,13 +415,15 @@ class LogicWire(LogicElement):
         self.w = 0
         self.h = 0
         
+        self.color = COLOR3
+        
         self.locked = False
     
     def deregister(self):
         """ Completely disconnects the wire from both terminals. """
         
         if self.input:
-            self.input.disconnect()
+            self.input.disconnect(self)
             self.input = None
         if self.output:
             self.output.disconnect()
@@ -515,9 +542,9 @@ class LogicWire(LogicElement):
             center_B = ( center_A[0] , pos_B[1] )
             
             
-            pg.draw.line(screen,GRAY,pos_A,center_A,3)
-            pg.draw.line(screen,GRAY,center_A,center_B,3)
-            pg.draw.line(screen,GRAY,center_B,pos_B,3)
+            pg.draw.line(screen,self.color,pos_A,center_A,3)
+            pg.draw.line(screen,self.color,center_A,center_B,3)
+            pg.draw.line(screen,self.color,center_B,pos_B,3)
         
 
 class LogicNot(LogicElement):
@@ -645,7 +672,7 @@ class LogicOr(Logic3Terminal):
         self.w = WIDTH * SCALE
         self.h = HEIGHT * SCALE
         
-        self.symbol = draw_or2()
+        self.symbol = draw_or()
     
     def gate_type(self):
         
@@ -809,6 +836,8 @@ class LogicLight(LogicElement):
         
         self.pads = [self.input]
         
+        self.color = COLOR3
+        
         self.answer_value = True
         self.user_value = False
         
@@ -905,7 +934,7 @@ class LogicLight(LogicElement):
         if self.answer_value:
             program_color = (192,0,0)
         else:
-            program_color = (32,32,64)
+            program_color = (64,0,0)
            
         
         radius = size[1]//2
@@ -916,10 +945,10 @@ class LogicLight(LogicElement):
         
         start = (position[0],center[1])
         
-        pg.draw.line(screen,GRAY,start,center,3)
+        pg.draw.line(screen,self.color,start,center,3)
         pg.draw.circle(screen,program_color,center,puzzle_radius)
-        pg.draw.circle(screen,GRAY,center,radius,2)
-        pg.draw.circle(screen,GRAY,center,inner_radius,2)
+        pg.draw.circle(screen,self.color,center,radius,2)
+        pg.draw.circle(screen,self.color,center,inner_radius,2)
          
         
         if self.user_value:
@@ -945,9 +974,14 @@ class LogicSwitch(LogicElement):
         
         self.label = label
         
+        self.on_color = LETTER_ON
+        self.off_color = LETTER_OFF
+        
         self.symbol_on = draw_switch_on()
         
         self.symbol_off = draw_switch_off()
+        
+        
         
         self.x = 0
         self.y = 0
@@ -1066,14 +1100,24 @@ class LogicSwitch(LogicElement):
         sw_radius = radius - 8
         label_pos = (sw_center[0] - sw_radius // 2,sw_center[1] - sw_radius)
         
-        screenprint(screen,self.label,label_pos,3*sw_radius//2,BLACK)
+        if self.value:
+            screenprint(screen,self.label,label_pos,3*sw_radius//2,self.on_color)
+        else:
+            screenprint(screen,self.label,label_pos,3*sw_radius//2,self.off_color)
     
         self.output.draw(screen)
         
 
-def draw_switch_base():
+def draw_switch_base(color1 = None, color2 = None,color3 = None):
     """ Draws out the switch. """
     
+    if not color1:
+        color1 = COLOR1
+    if not color2:
+        color2 = COLOR2
+    if not color3:
+        color3 = COLOR3
+        
     size = ( WIDTH * SCALE , HEIGHT * SCALE )
     position = ( 0 , 0 )
     center = ( size[0] // 2 , size[1] // 2 )
@@ -1091,20 +1135,25 @@ def draw_switch_base():
     
     start = (position[0]+size[0],center[1])
     
-    pg.draw.line(container,GRAY,start,center,3)
-    pg.draw.circle(container,GRAY,start,6)
-    pg.draw.circle(container,GRAY,left_center,radius)
-    pg.draw.circle(container,GRAY,right_center,radius)
-    pg.draw.rect(container,GRAY,(large_corner,box_size))
-    pg.draw.circle(container,DARK_GRAY,left_center,light_radius)
-    pg.draw.circle(container,DARK_GRAY,right_center,light_radius)
-    pg.draw.rect(container,DARK_GRAY,(small_corner,small_size))
+    pg.draw.line(container,color3,start,center,3)
+    pg.draw.circle(container,color3,start,6)
+    pg.draw.circle(container,color1,left_center,radius)
+    pg.draw.circle(container,color1,right_center,radius)
+    pg.draw.rect(container,color1,(large_corner,box_size))
+    pg.draw.circle(container,color2,left_center,light_radius)
+    pg.draw.circle(container,color2,right_center,light_radius)
+    pg.draw.rect(container,color2,(small_corner,small_size))
     
     return container
     
 
-def draw_switch_on():
+def draw_switch_on(color1 = None, color2 = None):
     
+    if not color1:
+        color1 = COLOR1
+    if not color2:
+        color2 = LIGHT_ON
+        
     size = ( WIDTH * SCALE , HEIGHT * SCALE )
     position = ( 0 , 0 )
     center = ( size[0] // 2 , size[1] // 2 )
@@ -1119,40 +1168,50 @@ def draw_switch_on():
     
     light_radius = size[1] // 2 - 4
         
-    pg.draw.circle(container,GRAY,sw_center,light_radius)
-    pg.draw.circle(container,color,sw_center,sw_radius)
+    pg.draw.circle(container,color1,sw_center,light_radius)
+    pg.draw.circle(container,color2,sw_center,sw_radius)
     
     container.set_colorkey((0,0,0))
     
     return container
     
-def draw_switch_off():
+def draw_switch_off(color1 = None, color2 = None):
     
+    if not color1:
+        color1 = COLOR1
+    if not color2:
+        color2 = LIGHT_OFF
+        
     size = ( WIDTH * SCALE , HEIGHT * SCALE )
     position = ( 0 , 0 )
     center = ( size[0] // 2 , size[1] // 2 )
     
     container = draw_switch_base()
-
-    color = DARK_GRAY
     
     light_radius = size[1] // 2 - 4
     
     sw_center = (center[0] - size[0] // 9 , center[1])    
     sw_radius = size[1] // 2 - 8
                 
-    pg.draw.circle(container,GRAY,sw_center,light_radius)
-    pg.draw.circle(container,color,sw_center,sw_radius)
+    pg.draw.circle(container,color1,sw_center,light_radius)
+    pg.draw.circle(container,color2,sw_center,sw_radius)
     
     container.set_colorkey((0,0,0))
     
     return container
         
-def draw_not():
+def draw_not(color1 = None, color2 = None,color3 = None):
     """ Draws out the Not gate and saves it as a transparent picture for
         blitting. 
     """
-        
+    
+    if not color1:
+        color1 = COLOR1
+    if not color2:
+        color2 = COLOR2
+    if not color3:
+        color3 = COLOR3
+    
     size = ( WIDTH * SCALE , HEIGHT * SCALE )
     position = ( 0 , 0 )
     center = ( size[0] // 2 , size[1] // 2 )
@@ -1176,79 +1235,36 @@ def draw_not():
     start = (position[0]+size[0],center[1])
     lead = (position[0],center[1] )
     
-    pg.draw.line(container,GRAY,start,center,3)
-    pg.draw.line(container,GRAY,lead,center,3)
+    pg.draw.line(container,color3,start,center,3)
+    pg.draw.line(container,color3,lead,center,3)
         
-    pg.draw.polygon(container,GRAY,external)
-    pg.draw.circle(container,GRAY,circle_spot,radius)
-    pg.draw.polygon(container,DARK_GRAY,internal)
-    pg.draw.circle(container,DARK_GRAY,circle_spot,light_radius)
+    pg.draw.polygon(container,color1,external)
+    pg.draw.circle(container,color1,circle_spot,radius)
+    pg.draw.polygon(container,color2,internal)
+    pg.draw.circle(container,color2,circle_spot,light_radius)
     
     container.set_colorkey((0,0,0))
     
     return container
 
-def draw_or():
+    
+def draw_or(color1 = None, color2 = None,color3 = None):
     """ Draws out the Or gate and saves it as a transparent picture for
         blitting.
     """
+    
+    if not color1:
+        color1 = COLOR1
+    if not color2:
+        color2 = COLOR2
+    if not color3:
+        color3 = COLOR3
     
     size = ( WIDTH * SCALE , HEIGHT * SCALE )
     position = ( 0 , 0 )
     center = ( size[0] // 2 , size[1] // 2 )
     
-    container = pg.Surface(size)
-    
-    radius = size[1]*5//9
-    light_radius = radius - 4
-    
-    side_center = (center[0] + size[0] // 9, center[1])
-    arc_corner = (position[0] + size[0] //9 - 3, position[1])
-    other_corner = (arc_corner[0],position[1] - size[1] //2)    
-    
-    blackout_center = (position[0] + size[0]//9,center[1])
-    
-        
-    corner = (position[0] + 2 * size[0] // 9,position[1])  
-    internal_corner = ( corner[0] + 3 , corner[1] + 3 )
-    square_size = (size[1] // 2 ,size[1])
-    arc_size = (size[1] * 10 ** 0.5 // 2, size[1] * 3 // 2)
-    small_size = (size[1] - 8 , size[1]-6)
-    small_arc = (arc_size[1] - 3 , arc_size[1]-3)    
-    start = (position[0]+size[0],center[1])
-    top_lead = (position[0],center[1] + size[1] // 4 )
-    bottom_lead = (position[0],center[1] - size[1] // 4)
-    top_end = (center[0],top_lead[1])
-    bottom_end = (center[0],bottom_lead[1])
-    
-    
-    
-    pg.draw.rect(container,GRAY,(corner,square_size))
-    
-    pg.draw.arc(container,GRAY,(arc_corner,arc_size),0.3,1.575,23)
-    pg.draw.arc(container,GRAY,(other_corner,arc_size),4.705,5.98,23)
-        
-    pg.draw.arc(container,GRAY,(arc_corner,small_arc),0.3,1.575,23)
-    pg.draw.arc(container,GRAY,(other_corner,small_arc),4.705,5.98,23)
-        
-    pg.draw.circle(container,BLACK,blackout_center,radius)
-    
-    pg.draw.line(container,GRAY,start,center,3)
-    pg.draw.line(container,GRAY,top_lead,top_end,3)
-    pg.draw.line(container,GRAY,bottom_lead,bottom_end,3)
-    
-    container.set_colorkey((0,0,0))
-    
-    return container
-    
-def draw_or2():
-    """ Draws out the Or gate and saves it as a transparent picture for
-        blitting.
-    """
-    
-    size = ( WIDTH * SCALE , HEIGHT * SCALE )
-    position = ( 0 , 0 )
-    center = ( size[0] // 2 , size[1] // 2 )
+    r = size[1] / 1.5
     
     container = pg.Surface(size)
     
@@ -1276,28 +1292,56 @@ def draw_or2():
     top_end = (center[0],top_lead[1])
     bottom_end = (center[0],bottom_lead[1])
     
+    pg.draw.line(container,color3,start,center,3)
+    pg.draw.line(container,color3,top_lead,top_end,3)
+    pg.draw.line(container,color3,bottom_lead,bottom_end,3)
     
-    
-    pg.draw.rect(container,GRAY,(corner,square_size))
-     
-    pg.draw.arc(container,GRAY,(arc_corner,arc_size),0.3,1.575,23)
-    pg.draw.arc(container,GRAY,(other_corner,arc_size),4.705,5.98,23)
+    for i in range(size[1]):
         
+        x0 = corner[0]
+        y1 = corner[1] + i
+        x1 = int( ( r * r - ( y1 - r * 3.0 / 4.0  ) ** 2.0  )**0.5 )
+        if i < size[1] / 2.0:
+            x1p = int( ( 4 * r * r - ( y1 - r * 1.4 ) ** 2.0  )**0.5 )
+        else:
+            x1p = int( ( 4 * r * r - ( y1 - r * 0.1) ** 2.0  )**0.5 )
+        x2 = arc_size[0] * x1p / r - 1.6 * r - 2
         
-    pg.draw.circle(container,BLACK,blackout_center,radius)
-    
-    pg.draw.line(container,GRAY,start,center,3)
-    pg.draw.line(container,GRAY,top_lead,top_end,3)
-    pg.draw.line(container,GRAY,bottom_lead,bottom_end,3)
+        pg.draw.line(container,color2,(x1,y1),(x2,y1),1)
+        
+    for i in range(size[1]):
+        
+        x0 = corner[0]
+        y1 = corner[1] + i
+        x1 = int( ( r * r - ( y1 - r * 3.0 / 4.0  ) ** 2.0  )**0.5 )
+        if i < size[1] / 2.0:
+            x1p = int( ( 4 * r * r - ( y1 - r * 1.4 ) ** 2.0  )**0.5 )
+            x1q = 5 - int( float( i % size[1] ) / float(size[1]) * 6.0)
+        else:
+            x1p = int( ( 4 * r * r - ( y1 - r * 0.1) ** 2.0  )**0.5 )
+            x1q = 5 - int( (1.0-(float( i % size[1] ) / float(size[1]))) * 6.0)
+        x2 = arc_size[0] * x1p / r - 1.6 * r - 2
+        
+        if i < 3 or i > size[1] - 4:
+            pg.draw.line(container,color1,(x1,y1),(x2,y1),1)
+        pg.draw.line(container,color1,(x1 - 3 ,y1),(x1,y1),1)
+        pg.draw.line(container,color1,(x2 - 3 - x1q ,y1),(x2,y1),1)
     
     container.set_colorkey((0,0,0))
     
     return container
     
-def draw_and():
+def draw_and(color1 = None, color2 = None,color3 = None):
     """ Draws the And gate and saves it as a transparent picture for
         blitting. 
     """
+    
+    if not color1:
+        color1 = COLOR1
+    if not color2:
+        color2 = COLOR2
+    if not color3:
+        color3 = COLOR3
     
     size = ( WIDTH * SCALE , HEIGHT * SCALE )
     position = ( 0 , 0 )
@@ -1320,14 +1364,14 @@ def draw_and():
     top_end = (center[0],top_lead[1])
     bottom_end = (center[0],bottom_lead[1])
     
-    pg.draw.line(container,GRAY,start,center,3)
-    pg.draw.line(container,GRAY,top_lead,top_end,3)
-    pg.draw.line(container,GRAY,bottom_lead,bottom_end,3)
+    pg.draw.line(container,color3,start,center,3)
+    pg.draw.line(container,color3,top_lead,top_end,3)
+    pg.draw.line(container,color3,bottom_lead,bottom_end,3)
     
-    pg.draw.circle(container,GRAY,side_center,radius)
-    pg.draw.rect(container,GRAY,(corner,square_size))
-    pg.draw.circle(container,DARK_GRAY,side_center,light_radius)
-    pg.draw.rect(container,DARK_GRAY,(internal_corner,small_size))
+    pg.draw.circle(container,color1,side_center,radius)
+    pg.draw.rect(container,color1,(corner,square_size))
+    pg.draw.circle(container,color2,side_center,light_radius)
+    pg.draw.rect(container,color2,(internal_corner,small_size))
     
     container.set_colorkey((0,0,0))
     

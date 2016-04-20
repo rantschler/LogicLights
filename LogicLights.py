@@ -26,12 +26,6 @@ key_dic = { K_SPACE : " ", K_MINUS : "-",
             K_u : "U", K_v : "V", K_w : "W", K_x : "X", K_y : "Y",
             K_z : "Z" }
 
-DARK_GRAY = (169,169,169)
-DIM_GRAY = (105,105,105)
-GRAY = (128,128,128)
-BLACK = (0,0,0)
-WHITE = (255,255,255)
-YELLOW = (255,255,0)
 
 #
 # CLASSES
@@ -54,15 +48,23 @@ class Wingding:
         self.vx = (random.random()*2.0 - 1.0) * 15.0 / float(self.radius)
         self.vy = (random.random()*2.0 - 1.0) * 15.0 / float(self.radius)
         
-        self.color = (random.choice(range(255)),
-                        random.choice(range(255)),
-                        random.choice(range(255)))
+        self.color = (  random.choice(range(128))+64    ,
+                        random.choice(range(128))+64    ,
+                        random.choice(range(128))+64    )
         
     def update(self):
         
         self.x += self.vx
         self.y += self.vy
         self.angle += self.rotation
+    
+    def is_out(self,area):
+        
+        in_x = -self.radius < self.x < area[0] + self.radius
+        in_y = -self.radius < self.y < area[1] + self.radius
+        
+        return not in_x or not in_y
+            
     
     def create_rotations(self):
         
@@ -96,12 +98,6 @@ class Wingding:
             point[1] = int(point[1])
             
         pg.draw.polygon(screen,self.color,pos)
-    
-    def draw2(self,screen):
-        
-        pos = (int(self.x),int(self.y))
-        
-        pg.draw.circle(screen,self.color,pos,self.radius)
         
     
 class Scrollbar:
@@ -1454,23 +1450,31 @@ def win(screen,player):
         time += clock.tick(30)
         new_clock = time % 500
         
-        if new_clock > old_clock:
+        if random.random() < new_clock / 500.0:
             wingdings.append(Wingding(pg.mouse.get_pos()))
         
+        kill_list = []
         for wingding in wingdings:
             wingding.update()
+            if wingding.is_out(screen_size):
+                kill_list.append(wingding)
+        for the_dead in kill_list:
+            wingdings.remove(the_dead)
             
         screen.blit(background,(0,0))
             
         x = screen_size[0] // 2 - 50
         y = screen_size[1] // 4
-        
+              
+        for wingding in wingdings:
+            wingding.draw(screen)
+            
         for n in range(4):
             
             x0 , y0 = shift_to_corner((x,y),n)
                 
             screenprint(screen,"Logic Lights",(x0,y0),36,BLACK)
-        
+         
         yellow_mix = mix_colors(BLACK, YELLOW, float(time) / 1000.0)
         white_mix = mix_colors(BLACK, WHITE, float(time) / 1000.0)
         
@@ -1482,14 +1486,12 @@ def win(screen,player):
             
             x0 , y0 = shift_to_corner((x,y),n)
                 
-            screenprint(screen,"You Win!",(x,y),36,BLACK)
+            screenprint(screen,"You Win!",(x0,y0),36,BLACK)
                 
         screenprint(screen,"You Win!",(x,y),36,white_mix)
-       
-        for wingding in wingdings:
-            wingding.draw(screen)
-       
+
         pg.display.update()
+        
         
         events = pg.event.get()
         for event in events:
