@@ -822,6 +822,50 @@ class Factory(LogicElement):
         
         self.instance.draw(screen)
     
+class LogicGround(LogicElement):
+    """ Will ground out a signal from a switch. """
+    
+    def __init__(self):
+        
+        self.container = None
+        
+        self.input = Pad(self,(-20,-20),"Input")
+        
+        self.pads = [self.input]
+        
+        self.color = COLOR3
+        
+        self.answer_value = True
+        self.user_value = False
+        
+        self.answer = []
+        self.user = []
+        
+        self.locked = True
+        
+        self.x = 0
+        self.y = 0
+        self.w = WIDTH * SCALE
+        self.h = HEIGHT * SCALE
+        
+        self.symbol = draw_ground()
+        
+    def gate_type(self):
+
+        return "Ground"
+    
+    def reset_pads(self):
+        """ Resets the position of the input pad. """
+        
+        position = (self.x,self.y)
+        size = (self.w,self.h)
+        center = (self.x + self.w//2, self.y + self.h//2)
+        
+        input_pos = [position[0],center[1] ]
+        
+        self.input.set_position(input_pos)
+    
+    
 class LogicLight(LogicElement):
     """ An indicator that turns on its base when its program is satisfied
         and turns on a central light when the player's logical structure 
@@ -854,10 +898,6 @@ class LogicLight(LogicElement):
     def gate_type(self):
 
         return "Light"
-    
-    def get_pads(self):
-        
-        return self.pads
     
     def reset_pads(self):
         """ Resets the position of the input pad. """
@@ -1106,7 +1146,8 @@ class LogicSwitch(LogicElement):
             screenprint(screen,self.label,label_pos,3*sw_radius//2,self.off_color)
     
         self.output.draw(screen)
-        
+
+
 
 def draw_switch_base(color1 = None, color2 = None,color3 = None):
     """ Draws out the switch. """
@@ -1200,6 +1241,39 @@ def draw_switch_off(color1 = None, color2 = None):
     
     return container
         
+
+def draw_ground(color = None):
+    """ Draws out the ground and saves it as a transparent picture for
+        blitting. 
+    """
+    
+    if not color:
+        color = COLOR3
+    
+    size = ( WIDTH * SCALE , HEIGHT * SCALE )
+    position = ( 0 , 0 )
+    center = ( size[0] // 2 , size[1] // 2 )
+    start = (position[0]+size[0],center[1])
+    lead = (position[0],center[1] )
+    container = pg.Surface(size)
+    
+    top = [center[0],0]
+    bottom = [center[0],size[1]]
+    dx = 8
+    dy = size[1] // 9
+    
+    pg.draw.line(container,color,lead,center,3)
+    for i in range(3):
+        bottom[1] -= dy
+        top[1] += dy
+        pg.draw.line(container,color,top,bottom,3)
+        top[0] += dx
+        bottom[0] += dx
+        
+    container.set_colorkey((0,0,0))
+    
+    return container
+    
 def draw_not(color1 = None, color2 = None,color3 = None):
     """ Draws out the Not gate and saves it as a transparent picture for
         blitting. 

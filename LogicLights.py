@@ -410,7 +410,13 @@ class LevelBox:
         else:
             pg.draw.rect(self.fore,(32,0,0),((0,225),(x,y - 225)))
     
-        screenprint(self.fore,str(self.level),(2,2),24)
+        if self.level == 0:
+            out = "1 Switch"
+        else:
+            out = str(self.level)
+            out += " Switches"
+    
+        screenprint(self.fore,out,(4,2),22)
         
         pg.draw.rect(self.fore,WHITE,((0,0),(x,y)),2)
     
@@ -1298,6 +1304,9 @@ def login(screen):
     background.convert()
     background.fill(BLACK)
     
+    test = LogicGround()
+    test.set_position((150,150))
+    
     while not ready :
         
         
@@ -1311,6 +1320,7 @@ def login(screen):
         x -= 100
         y += 150
         screenprint(screen,"Enter Your Name: "+name,(x,y),24,WHITE)
+        test.draw(screen)
         pg.display.update()
         
         events = pg.event.get()
@@ -1363,10 +1373,6 @@ def login(screen):
         index.write("\n")
         index.write(outline)
         index.close()
-        
-        
-    
-        
         
     return player
 
