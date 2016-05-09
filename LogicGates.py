@@ -1,4 +1,3 @@
-# import gameclass_0_97 as gc
 import pygame as pg
 from LogicLogic import *
 
@@ -399,6 +398,7 @@ class LogicWire(LogicElement):
         
         self.container = None
         self.replacement = None
+        self.clasps = []
         
         if node and node.get_type() == "Output":
         
@@ -414,6 +414,7 @@ class LogicWire(LogicElement):
         self.y = 0
         self.w = 0
         self.h = 0
+        self.center = 0.5
         
         self.color = COLOR3
         
@@ -428,10 +429,21 @@ class LogicWire(LogicElement):
         if self.output:
             self.output.disconnect()
             self.output = None
+        for clasp in self.clasps:
+            clasp.disconnect()
     
     def gate_type(self):
         
         return "Wire"
+        
+    def get_type(self):
+        """ Returns the type of the logic element. """
+        
+        return "Wire" 
+    
+    def get_clasps(self):
+        
+        return tuple(self.clasps)
     
     def get_pads(self):
         """ Returns the device terminals that the wire is connected to. """
@@ -446,7 +458,9 @@ class LogicWire(LogicElement):
             
             pads.append(self.output)
         
-        return pads
+        pads += self.clasps
+        
+        return tuple(pads)
     
     def evaluate(self):
         """ Passes the input state to the output state in the evaluation
@@ -459,8 +473,7 @@ class LogicWire(LogicElement):
         
         else:
             
-            return None
-        
+            return None   
     def connect(self,node):
         """ Connects the wire to the node (device terminal) if it can. 
             Returns True if connection is viable, False if it is not.
@@ -497,10 +510,7 @@ class LogicWire(LogicElement):
         
         return True
     
-    def get_type(self):
-        """ Returns the type of the logic element. """
-        
-        return "Wire"
+    
     
     def disconnect(self,node):
         """ Disconnects the terminal from the wire.  """
@@ -513,6 +523,33 @@ class LogicWire(LogicElement):
             
             self.output = None
     
+    
+    def get_endpoints(self):
+        
+        if self.input:
+                
+            pos_A = self.input.get_position()
+            
+        else:
+                
+            pos_A = ( self.x , self.y )
+            
+        if self.output:
+                
+            pos_B = self.output.get_position()
+                
+        else:
+                
+            pos_B = ( self.x , self.y )
+        
+        return pos_A,pos_B
+            
+    def create_segments(self):
+        
+        pos_A , pos_Z = self.get_endpoints()
+        
+        pass
+    
     def draw(self,screen):
         """ Draws the wire between nodes. """
         
@@ -522,31 +559,43 @@ class LogicWire(LogicElement):
         
         else:
             
-            if self.input:
-                
-                pos_A = self.input.get_position()
-            
-            else:
-                
-                pos_A = ( self.x , self.y )
-            
-            if self.output:
-                
-                pos_B = self.output.get_position()
-                
-            else:
-                
-                pos_B = ( self.x , self.y )
-            
-            center_A = ( ( pos_A[0] + pos_B[0] ) // 2 , pos_A[1] )
-            center_B = ( center_A[0] , pos_B[1] )
+            pos_A , pos_B = self.get_endpoints()
+           
+            center = self.center * pos_A[0] + (1 - self.center) * pos_B[0]
+            center_A = ( center , pos_A[1] )
+            center_B = ( center , pos_B[1] )
             
             
+            pg.draw.line(screen,BLACK,pos_A,center_A,5)
+            pg.draw.line(screen,BLACK,center_A,center_B,5)
+            pg.draw.line(screen,BLACK,center_B,pos_B,5)
             pg.draw.line(screen,self.color,pos_A,center_A,3)
             pg.draw.line(screen,self.color,center_A,center_B,3)
             pg.draw.line(screen,self.color,center_B,pos_B,3)
+            
+            for clasp in self.clasps:
+                clasp.draw(screen)
         
-
+class LogicClasp(Pad):
+    
+    def __init__(self,element,position,type = "Output"):
+        """ Initializes the terminal. """
+        
+        self.x = position[0]
+        self.y = position[1]
+        
+        self.container = element
+        
+        self.connector = []
+        
+        self.color = COLOR3
+        
+        self.type = type
+        
+        self.r = 6
+        
+    
+    
 class LogicNot(LogicElement):
     """ A two terminal Not gate. """
     
@@ -777,7 +826,7 @@ class LogicAnd(Logic3Terminal):
 class Factory(LogicElement):
     """ A factory for creating logic gates. """
     
-    def __init__(self,Machine,position):
+    def __init__(self,Machine,position,scale = 1.0):
         
         self.container = None
         

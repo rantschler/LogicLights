@@ -11,6 +11,7 @@
 #
 
 import random,math
+from LogicScreen import *
 from LogicGates  import *
 from pygame.locals import *
 import pygame as pg
@@ -805,7 +806,27 @@ class Dude:
         
         self.tutorial = None
         self.tutorial_active = False
-    
+
+      
+
+    def initialize_levels(self,x,y,size):
+        
+        for n in range(4):
+            x += 175 
+            n += 1
+            current_level = LevelBox(n,(x,y),size,self)
+        
+            out = None
+            for m in range(4**(n+1)):
+              
+                if out:
+                    current_level.set_puzzle_value(m,out)
+           
+            self.add_level(current_level)
+            
+    #
+    # File functions
+    #
     def set_filename(self,name):
         """ Gives a file name to the player. """
         
@@ -855,6 +876,43 @@ class Dude:
         
         pass
     
+    def initialize(self):
+       
+        size = (150,250)
+        x = -75
+        y = 250
+        
+        self.initialize_levels(x,y,size)
+    
+        file = find_file(self.name)
+    
+        if type(file) == str:
+            self.file = file
+            self.load()
+        else:
+            playername = self.name.lower()
+            filename = playername[0]
+        
+            number = str(file)
+        
+            for i in range(15-len(number)):
+                filename += "0"
+            filename += number
+        
+            self.file = filename
+            self.save()
+        
+            outline = filename + " " + self.name
+        
+            index = open("index.txt","a")
+            index.write("\n")
+            index.write(outline)
+            index.close()
+    
+    #
+    # Tutorial Functions
+    #
+
     def add_tutorial(self,tutorial):
         
         self.tutorial = tutorial
@@ -874,36 +932,18 @@ class Dude:
             
         self.tutorial_active = False
     
-    def add_level(self,level):
-        
-        self.levels.append(level)
-    
     def get_tutorial(self):
         
         return self.tutorial
+    def complete_tutorial(self):
+        
+        self.tutorial = False
+        
     
     def get_levels(self):
         
         return tuple(self.levels)
-        
-    def complete_tutorial(self):
-        
-        self.tutorial = False
-     
-    def initialize_levels(self,x,y,size):
-        
-        for n in range(4):
-            x += 175 
-            n += 1
-            current_level = LevelBox(n,(x,y),size,self)
-        
-            out = None
-            for m in range(4**(n+1)):
-              
-                if out:
-                    current_level.set_puzzle_value(m,out)
-           
-            self.add_level(current_level)
+  
     
     def get_name(self):
         """ Return the player's name. """
@@ -939,6 +979,10 @@ class Dude:
         
         self.level = level
     
+    def add_level(self,level):
+        
+        self.levels.append(level)
+        
     def mark_win(self):
         """ Registers a win in the level list. """
         
@@ -971,6 +1015,7 @@ class Cursor:
         self.h = size[1]
         
         self.contents = object
+        self.origin = object.get_position()
     
     def get_thing_from(self,other):
         """ Get the selected widget. """
@@ -993,6 +1038,10 @@ class Cursor:
             thing.set_container(self)
             
             other.remove_thing()
+    
+    def get_origin(self):
+        
+        return tuple(self.origin)
     
     def get_position(self):
         """ Get the position of the cursor. """
@@ -1018,6 +1067,12 @@ class Cursor:
         """ Drop the object somewhere. """
         
         pass
+    
+    def to_origin(self):
+        
+        self.contents.set_position(self.origin)
+        
+        return self.contents
         
     def update(self,position):
         """ Change the position of the widget. """
@@ -1234,6 +1289,221 @@ def mix_colors(color1,color2,percent):
     
     return ( new_R , new_G , new_B )
 
+
+#
+# MVC CLASSES
+#
+
+class Game:
+    """ Keeps track of the game and its objects. """
+    
+    #
+    # Game states:
+    #
+    #   0 - Login Screen ( No player logged in )
+    #   1 - Spash Screen ( No puzzle chosen )
+    #   2 - Game Screen ( No result on current puzzle )
+    #   3 - Result Screen ( Current puzzle with result )
+    #
+    
+    def __init__(self):
+        
+        self.name = ""
+        self.player = None
+        
+        self.scale = 27
+        
+        self.state = 0
+        self.states = []
+        
+        self.factories = []        
+        self.generate_factories()
+        
+        garbage_location = (30*self.scale,16* self.scale)
+        garbage_size = (3*self.scale,4* self.scale)
+        self.garbage = Garbage(garbage_location,garbage_size)
+        
+        self.elements = []
+    
+    def get_state(self):
+        
+        return self.state
+    
+    def get_player(self):
+        
+        return self.player
+    
+    def login(self,player):
+        
+        self.name = player.get_name()
+        self.player = player
+    
+    def logout(self):
+        
+        self.name = ""
+        self.player = None
+    
+    def advance(self):
+        
+        self.state += 1
+        
+        if state > 3:
+            player.clear_puzzle()
+            state = 1
+    
+    def add_screen(self,screen = None):
+        
+        if type(screen) == str:
+            
+            new_screen = Screen(screen,self)
+        
+    def current_screen(self):
+        
+        return self.screens[self.screen]
+    
+    def generate_screens(self):
+        
+        pass
+        
+    def generate_factories(self):
+        
+        self.factories = []
+        
+        x = self.scale * 9 
+        y = self.scale * 17
+    
+        x += self.scale * 11
+    
+        self.factories.append(Factory(LogicNot,(x,y),self.scale))
+    
+        x += self.scale * 11
+    
+        self.factories.append(Factory(LogicOr,(x,y),self.scale))
+    
+        x += self.scale * 11
+    
+        self.factories.append(Factory(LogicAnd,(x,y),self.scale))
+    
+    
+    def keystroke(self,stroke):
+        
+        if self.state == 0 and key in key_dic:
+            self.name += key_dic[event.key]
+        elif event.key == K_RETURN:
+            self.player = Dude(self.name)
+            self.player.initialize()
+        elif event.key == K_BACKSPACE:
+            self.name = self.name[:-1]
+    
+    def mousedown(self,pos):
+        
+        program = self.screens[self.screen].get_program()
+        
+        for factory in self.factories:
+            
+            if program != None and factory.is_clicked(pos):
+                self.held = Cursor(factory.create(pos))
+                self.screen[self.screen].append(cursor)
+    
+    def mouseup(self,pos):
+        
+        program = self.screens[self.screen].get_program()
+        
+        if program:
+            
+            return None
+        
+        if self.garbage.is_clicked():
+            
+            self.program.remove(self.held) 
+        
+        pass
+    
+    def resize(self,size):
+        
+        for screen in self.screens:
+            
+            screen.resize(size)
+        
+        self.garbage.resize(size)
+        
+        for factory in self.factories:
+            
+            factory.resize(size)
+    
+    def draw(self,screen):
+    
+        self.screen.draw(screen)
+        self.cursor.draw(screen)
+        
+        
+class Viewer:
+    
+    def __init__(self,size,game):
+        
+        self.size = size
+        self.screen = pg.display.set_mode(screen_size,False,32)
+    
+        self.game = game
+    
+    def resize(self,size):
+        """ Resizes the display. """
+        pass
+        
+        self.screen = pg.display.set_mode(size,RESIZABLE,32)
+        for screen in self.game.get_screens():
+            self.screen.resize(size)
+        game.resize(size)
+    
+    def draw(self):
+        
+        self.screen.draw(screen)
+        
+        pg.display.update()
+    
+class Controller:
+    
+    def __init__(self,game):
+        
+        self.game = game
+    
+    def check(self):
+        
+        state = self.game.get_state()
+        player = self.game.get_player()
+        
+        events = pg.event.get()
+        
+        for event in events:
+                
+            if event.type == KEYDOWN:
+                # Key input for entering names
+                if state == 0:
+                    game.keystroke(event.key)
+            
+            elif event.type == MOUSEBUTTONDOWN:
+                check_pos = pg.mouse.get_pos()
+                game.mousedown(check_pos)
+            
+            elif event.type == MOUSEBUTTONUP:
+                check_pos = pg.mouse.get_pos()
+                game.mouseup(check_pos)
+            
+            elif event.type == VIDEORESIZE:
+                # Resizes screen 
+                new_size = event.size
+                self.screen.resize(new_size)
+        
+            if event.type == QUIT:
+                if state == 2:
+                    # If game is being played, mark as tried.
+                    player.mark_loss()
+                    player.save()
+                exit()
+        
+    
+        
+
 # 
 # MVC FUNCTIONS
 #
@@ -1292,23 +1562,17 @@ def view(screen,background,avatar = None,things = [],foreground = None):
 # SCREENS
 #
     
-def login(screen):
+def login(screen,game):
     """ Creates the login screen. """
     
+    game.logout()
     name = ""
     ready = False
     
     screen_size = screen.get_size()
-    
-    background = pg.Surface(screen_size)
-    background.convert()
-    background.fill(BLACK)
-    
-    test = LogicGround()
-    test.set_position((150,150))
+    background = blank_background(screen_size,BLACK)
     
     while not ready :
-        
         
         x = screen_size[0] // 2 - 50
         y = screen_size[1] // 4
@@ -1320,18 +1584,12 @@ def login(screen):
         x -= 100
         y += 150
         screenprint(screen,"Enter Your Name: "+name,(x,y),24,WHITE)
-        test.draw(screen)
         pg.display.update()
         
         events = pg.event.get()
         for event in events:
             if event.type == QUIT:
                 exit()
-            if event.type == VIDEORESIZE:
-                new_size = event.size
-                screen = pg.display.set_mode(new_size,RESIZABLE,32)
-                background.resize(new_size)
-                field.imprint(draw_field,background)
             if event.type == KEYDOWN:
                 if event.key in key_dic:
                     name += key_dic[event.key]
@@ -1340,41 +1598,11 @@ def login(screen):
                 elif event.key == K_BACKSPACE:
                     name = name[:-1]
                     
-                    
-    size = (150,250)
-    x = -75
-    y = 250
-    n = 0  
     player = Dude(name)
-    player.initialize_levels(x,y,size)
+    player.initialize()
     
-    file = find_file(name)
-    
-    if type(file) == str:
-        player.set_filename(file)
-        player.load()
-    else:
-        playername = name.lower()
-        filename = playername[0]
+    game.login(player)
         
-        number = str(file)
-        
-        for i in range(15-len(number)):
-            filename += "0"
-        filename += number
-        
-        player.set_filename(filename)
-        
-        player.save()
-        
-        outline = filename + " " + name.lower()
-        
-        index = open("index.txt","a")
-        index.write("\n")
-        index.write(outline)
-        index.close()
-        
-    return player
 
 def retire(screen,player):
     """ Marks the losing screen. """
@@ -1382,9 +1610,7 @@ def retire(screen,player):
     time = 0
     limit = 5000
     wait = True
-    
-    player.mark_loss()
-    
+
     background = screen
     screen_size = screen.get_size()
     
@@ -1423,10 +1649,7 @@ def retire(screen,player):
         for event in events:
             if event.type == QUIT:
                 exit()
-                
-                
             if event.type == MOUSEBUTTONDOWN or event.type == KEYDOWN:
-                
                 wait = False
 
 def win(screen,player):
@@ -1449,7 +1672,6 @@ def win(screen,player):
     
     screen_size = screen.get_size()
         
-    
     clock = pg.time.Clock()
     while wait:
         
@@ -1510,9 +1732,10 @@ def win(screen,player):
                 
                 wait = False
 
-def splash(screen,player):
+def splash(screen,game):
     """ Controls the spash page. """
     
+    player = game.get_player()
     player.save()
     
     wait = True
@@ -1521,9 +1744,8 @@ def splash(screen,player):
     level = 3
     puzzle = random.choice(range(4**3))
     
-    background = pg.Surface(screen.get_size())
-    background.convert()
-    background.fill(BLACK)
+    screen_size = screen.get_size()
+    background = blank_background(screen_size,BLACK)
     
     box = 0
         
@@ -1581,6 +1803,8 @@ def splash(screen,player):
             
                 if check_pos[0] > 825 and check_pos[1] < 30:
                 
+                    game.logout()
+                
                     return "Logout"
                 
             if event.type == MOUSEBUTTONUP:
@@ -1602,9 +1826,8 @@ def game(screen,player):
     # Initialize screen and clock
     #
     
-    background = pg.Surface(screen.get_size())
-    background.convert()
-    background.fill(BLACK)
+    screen_size = screen.get_size()
+    background = blank_background(screen_size,BLACK)
     
     clock = pg.time.Clock()
     
@@ -1726,11 +1949,6 @@ def game(screen,player):
                 player.mark_loss()
                 player.save()
                 exit()
-            if event.type == VIDEORESIZE:
-                new_size = event.size
-                screen = pg.display.set_mode(new_size,RESIZABLE,32)
-                background.resize(new_size)
-                field.imprint(draw_field,background)
             if event.type == MOUSEBUTTONDOWN:
                 check_pos = pg.mouse.get_pos()
                 
@@ -1758,7 +1976,6 @@ def game(screen,player):
                         player.get_tutorial().advance_message()
                         
                 for thing in buttons + lights + program:
-                    
                     
                     for pad in thing.get_pads():
                         
@@ -1939,7 +2156,16 @@ def game(screen,player):
                 win = light.evaluate(buttons)
             do_update = False
               
-              
+    if win:
+  
+        player.mark_win()
+        if player.in_tutorial():
+            player.advance_tutorial()
+    
+    else:
+        
+        player.mark_loss()
+
     return win
 
 def main():
@@ -1953,24 +2179,32 @@ def main():
     screen_size = (900,600)
     screen = pg.display.set_mode(screen_size,False,32)
     
-    user = login(screen)
+    central = Game()
+    central.add_screen("login")
+    central.add_screen("splash")
+    central.add_screen("game")
+    central.add_screen("win")
+    central.add_screen("retire")
+    
+    result = True
     
     while True:
         
-        result = splash(screen,user)
         
-        if result:
+        if not central.get_player():
             
-            user = login(screen)
+            login(screen,central)
         
         else:
         
-            result = game(screen,user)
+            result = game(screen,central.get_player())
 
             if result:
-                win(screen,user) 
+                win(screen,central.get_player()) 
             else:
-                retire(screen,user)
+                retire(screen,central.get_player())
+                
+        splash(screen,central)
 
 #
 # START UP
