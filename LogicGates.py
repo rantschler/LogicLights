@@ -33,6 +33,173 @@ LETTER_OFF = BLACK
 ## LETTER_ON = BLACK
 ## LETTER_OFF = WHITE
 
+class Segment:
+    """ Creates a horizontal or vertical segment of wire. 
+        This is always a part of a LogicWire element and is used to 
+            make a more manipulable wire with an arbitrary number of
+            wire segments.
+    """
+    
+    def __init__(self,posA,posB):
+        """ Initializes the segment. """
+        
+        self.start = None
+        self.end = None
+        self.start_pos = list(posA)
+        self.end_pos   = list(posB)
+        
+        self.color = COLOR3
+    
+    def gate_type(self):
+        
+        return None
+    
+    def is_horizontal(self):
+        """ Checks to see if the wire segment is horizontal or vertical. """
+        
+        if self.start_pos[1] == self.end_pos[1]:
+            return True
+        else:
+            return False
+    
+    def is_clicked(self,pos,sense):
+        """ Checks to see if the wire segment has been clicked. """
+        
+        if self.is_horizontal():
+            t1 = min( self.start_pos[0] , self.end_pos[0] )
+            t2 = max( self.start_pos[0] , self.end_pos[0] )
+            testH = t1 < pos[0] < t2
+            testV = -sense < pos[1] - self.start_pos[1] < sense
+        else:
+            t1 = min( self.start_pos[1] , self.end_pos[1] )
+            t2 = max( self.start_pos[1] , self.end_pos[1] )
+            testH = -sense < pos[0] - self.start_pos[0] < sense
+            testV = t1 < pos[1] < t2
+        
+        if testH and testV:
+            return True
+        else:
+            return False
+    
+    def get_location(self,length):
+        """ Returns the point along the wire a distance _length_ from 
+            the starting position of the wire.
+        """
+        
+        if self.is_horizontal():
+            dx = self.end_pos[0] - self.start_pos[0]
+            if dx != 0:
+                sign =int(float( dx )/ abs(dx))
+            else: 
+                sign = 0
+            nx = self.start_pos[0] + sign * length
+            ny = self.start_pos[1]
+        else:
+            dy = self.end_pos[1] - self.start_pos[1]
+            if dy != 0:
+                sign = int(float( dy ) / abs(dy))
+            else:
+                sign = 0
+            nx = self.start_pos[0]
+            ny = self.start_pos[1] + sign * length
+            
+        
+        return [ nx , ny ]
+        
+    def set_starting_position(self,pos):
+        """ Sets the starting position of the segment and keeps its
+            direction constant.
+        """ 
+        
+        horaz = self.is_horizontal()
+        
+        self.start_pos = list(pos)
+        if horaz:
+            self.end_pos[1] = pos[1]
+        else:
+            self.end_pos[0] = pos[0]
+    
+    def set_ending_position(self,pos):
+        """ Sets the ending position of the segment and keeps its
+            direction constant.
+        """ 
+        
+        horaz = self.is_horizontal()
+        
+        self.end_pos = list(pos)
+        if horaz:
+            self.start_pos[1] = pos[1]
+        else:
+            self.start_pos[0] = pos[0]
+    
+    def get_starting_position(self):
+        
+        return list(self.start_pos)
+    
+    def get_ending_position(self):
+        
+        return list(self.end_pos)
+    
+    def get_ends(self):
+        
+        return list(self.start_pos) , list(self.end_pos)
+    
+    def set_position(self,pos):
+        """ Moves the wire segment when it is the cursor. 
+            The wire segment should move horizontally or vertically,
+                but not both.
+        """
+        
+        if self.is_horizontal():
+            self.start_pos[1] = pos[1]
+            self.end_pos[1] = pos[1]
+        else:
+            self.start_pos[0] = pos[0]
+            self.end_pos[0] = pos[0]
+        
+        if self.start:
+            self.start.set_ending_position(self.start_pos)
+        if self.end:
+            self.end.set_starting_position(self.end_pos)
+    
+    def set_start(self,segment):
+        
+        self.start = segment
+    
+    def set_end(self,segment):
+        
+        self.end = segment
+    
+    def get_length(self):
+        
+        lx = self.end_pos[0] - self.start_pos[0]
+        ly = self.end_pos[1] - self.start_pos[1]
+        
+        return abs(lx) + abs(ly)
+    
+    def get_distance(self,pos):
+        
+        if self.is_horizontal():
+            return abs(pos[0] - self.start_pos[0])
+        else:
+            return abs(pos[1] - self.start_pos[1])
+    
+    def draw_light(self,screen):
+        
+        start = ( int(self.start_pos[0]) , int(self.start_pos[1]) )
+        end   = ( int(self.end_pos[0])   , int(self.end_pos[1])   )
+        
+        pg.draw.line( screen, self.color , start, end , 3 )
+    
+    def draw_dark(self,screen):
+        
+        start = ( int(self.start_pos[0]) , int(self.start_pos[1]) )
+        end   = ( int(self.end_pos[0])   , int(self.end_pos[1])   )
+        
+        pg.draw.line( screen, BLACK ,      start, end , 5 )
+        
+    
+
 class Pad:
     """ Terminal object that connects a logic gate to a wire. """
     
@@ -126,8 +293,10 @@ class Pad:
         wire.disconnect(self)
 
         return wire
+        
     def is_clasp(self):
         return False
+        
     def is_clicked(self,pos):
         """ Checks to see if the pad has been clicked. """
         
@@ -189,6 +358,14 @@ class Pad:
         self.x = position[0]
         self.y = position[1]
         
+        
+        if self.connector:
+            if self.type == "Output":
+                for connector in self.connector:
+                    connector.update_input()
+            else:
+                self.connector.update_output()
+        
     def get_position(self):
         """ Returns the screen position of the terminal. """
         
@@ -205,57 +382,6 @@ class Pad:
             pg.draw.circle(screen,self.color,(self.x,self.y),self.r)
             pg.draw.circle(screen,BLACK,(self.x,self.y),self.r // 2)
 
-class Segment:
-    
-    def __init__(self,posA,posB):
-        
-        self.start_pos = list(posA)
-        self.end_pos   = list(posB)
-        
-        self.color = COLOR3
-    
-    def set_starting_position(self,pos):
-        
-        self.start_pos = list(pos)
-    
-    def set_ending_position(self,pos):
-        
-        self.end_pos = list(pos)
-    
-    def get_starting_position(self,pos):
-        
-        self.start_pos = list(pos)
-    
-    def get_ending_position(self,pos):
-        
-        self.end_pos = list(pos)
-    
-    def set_start(self,segment):
-        
-        self.start = segment
-        self.start_pos = segment.get_starting_position()
-    
-    def set_end(self,segment):
-        
-        self.end = segment
-        self.end_pos = segment.get_ending_position()
-    
-    def get_length(self):
-        
-        lx = self.end[0] - self.start[0]
-        ly = self.end[1] - self.start[1]
-        
-        return abs(lx) + abs(ly)
-    
-    def draw(self,screen):
-        
-        start = ( int(self.start[0]) , int(self.start[1]) )
-        end   = ( int(self.end[0])   , int(self.end[1])   )
-        
-        pg.draw.line( screen, BLACK ,      start, end , 5 )
-        pg.draw.line( screen, self.color , start, end , 3 )
-        
-        
 
 class LogicClasp(Pad):
     
@@ -275,9 +401,9 @@ class LogicClasp(Pad):
         
         self.container = wire
         
-        self.set_position(position)
-        
         self.connector = []
+        
+        self.set_position(position)
         
         self.color = COLOR3
         
@@ -288,6 +414,7 @@ class LogicClasp(Pad):
     
     def is_clasp(self):
         return True
+        
     def set_position(self,position = None):
         
         print position,
@@ -302,6 +429,10 @@ class LogicClasp(Pad):
         
         self.x , self.y = self.container.get_relative_position(pos)
         
+        if self.connector:
+            for connector in self.connector:
+                connector.update_input()
+                    
     def disconnect(self,connected = None):
         """ Remove the wire from the terminal, returns the wire. """
         
@@ -538,7 +669,6 @@ class LogicWire(LogicElement):
         self.container   = None
         self.replacement = None
         self.clasps      = []
-        self.segments    = []
         
         if node and node.get_type() == "Output":
         
@@ -550,36 +680,34 @@ class LogicWire(LogicElement):
             self.input  = None
             self.output = node
         
+        
         self.x = 0
         self.y = 0
         self.w = 0
         self.h = 0
+        
+        self.initial_segments()
+        
         self.center = 0.5
         
         self.color = COLOR3
         
+        self.sensitivity = 5
+        
         self.locked = False
+        
+    def get_type(self):
+        """ Returns the type of the logic element. """
+        
+        return "Wire" 
     
-    def deregister(self):
-        """ Completely disconnects the wire from both terminals. """
-        
-        connected = []
-        
-        if self.input:  
-            self.input.disconnect(self)
-        self.input = None
-        if self.output:
-            self.output.disconnect()
-        self.output = None
-        for clasp in list(self.clasps):
-            connected += clasp.delete()
-        self.clasps = []
-        
-        return connected
-        
     def gate_type(self):
         
         return "Wire"
+    
+    def get_clasps(self):
+        
+        return tuple(self.clasps)
     
     def remove_clasp(self,clasp):
         
@@ -591,20 +719,35 @@ class LogicWire(LogicElement):
             self.clasps.remove(clasp)
         
         return wire
+        
     def append_clasp(self,clasp):
         
         if not clasp in self.clasps:
             self.clasps.append(clasp)
         
-    def get_type(self):
-        """ Returns the type of the logic element. """
+    def add_clasp(self,pos):
+        """ Adds a probe to the wire so that another wire can be connected
+            to it.
+        """
         
-        return "Wire" 
-    
-    def get_clasps(self):
+        length = self.get_length()
+        segment = self.get_segment(pos)
+        i = 0
+        abs_pos = 0
+        while i < len(self.segments) - 1 and self.segments[i] != segment:
+            abs_pos += self.segments[i].get_length()
+            i += 1
         
-        return tuple(self.clasps)
-    
+        abs_pos += self.segments[i].get_distance(pos)
+        
+        spot = abs_pos / length
+            
+        new_clasp = LogicClasp(self,spot)
+        
+        self.clasps.append(new_clasp)
+        
+        return new_clasp
+
     def get_pads(self):
         """ Returns the device terminals that the wire is connected to. """
         
@@ -625,120 +768,101 @@ class LogicWire(LogicElement):
     def get_input(self):
         
         return self.input
-    
-    def length_info(self):
-        """ Calculuates wire length and horaz and vert discplacements. """
-        pos_i = self.input.get_position()
-        pos_o = self.output.get_position()
         
-        dx = abs(pos_o[0] - pos_i[0])
-        dy = abs(pos_o[1] - pos_i[1])
-        total_length = dx + dy
+    def deregister(self):
+        """ Completely disconnects the wire from both terminals. """
         
-        return dx, dy, total_length
+        connected = []
+        
+        if self.input:  
+            self.input.disconnect(self)
+        self.input = None
+        if self.output:
+            self.output.disconnect()
+        self.output = None
+        for clasp in list(self.clasps):
+            connected += clasp.delete()
+        self.clasps = []
+        
+        return connected
     
-    
-    def get_relative_position(self,spot):
-        """ Returns the position along the wire for something. 
-            Spot is a number between zero and one (0,1).
+    def get_length(self):
+        """ Calculates the lengthof the wire by evaluating its component 
+            segments. 
         """
         
-        #
-        # Changes when segments are used.
-        #
+        length = 0
+        for segment in self.segments:
+            length += segment.get_length()
         
-        pos_i = self.input.get_position()
-        pos_o = self.output.get_position()
-        
-        dx,dy,total_length = self.length_info()
-        
-        segment = float( dx )/ 2.0 
-        
-        if spot < float(segment) / total_length:
-            x = int( pos_i[0] + spot * total_length )
-            y = pos_i[1]
-        elif spot > 1.0 - float(segment) / total_length:
-            x = int( pos_o[0] - (1.0 - spot) * total_length )
-            y = pos_o[1]
-        else:
-            ny = spot * total_length - dx / 2
-            if pos_o[1] > pos_i[1]:
-                sign = 1.0
-            else:
-                sign = -1.0
-            x = int( float(pos_i[0] + pos_o[0])/2.0 )
-            y = int( pos_i[1] + sign * ny )
-            
-        return x,y
-        
-    def add_clasp(self,pos):
-        
-        pos_i = self.input.get_position()
-        pos_o = self.output.get_position()
-        
-        dx,dy,total_length = self.length_info()
-        
-        if -5 < pos[1] - pos_i[1] < 5:
-            spot = float(pos[0]-pos_i[0]) / total_length
-            print dx / 2 , pos[0] - pos_i[0],total_length
-        elif -5 < pos[1] - pos_o[1] < 5:
-            spot = float(dy)
-            spot += float(pos[0]-pos_i[0])
-            spot /= total_length
-        else:
-            spot = float(dx)/ 2.0
-            spot += float(abs(pos[1]-pos_i[1]))
-            spot /= total_length
-        
-        print spot
-        
-        new_clasp = LogicClasp(self,spot)
-        
-        self.clasps.append(new_clasp)
-        
-        return new_clasp
+        return length    
     
-    def move_segment(self,pos):
+    def get_relative_position(self,spot):
+        """ Finds the location of a point on the wire as a percentage
+            of its length.
+        """
         
-        pass
+        length = self.get_length()
+        position = int(spot * float(length))
+        
+        i = 0
+        check_A = True
+        check_B = position > self.segments[0].get_length()
+        while  check_A and check_B:
+            position -= self.segments[i].get_length()
+            i += 1
+            check_A = i < len(self.segments) - 1
+            check_B = position > self.segments[i].get_length()
+            
+        return self.segments[i].get_location(position)
+
+    def get_segment(self,pos):
+        """ Gets a segment that has been clicked so that it can be used
+            elsewhere. 
+        """
+        
+        segments = list(self.segments)
+        for segment in segments:
+            if segment.is_clicked(pos,self.sensitivity):
+                return segment
+        
+        return None
+    
+    def get_segments(self):
+        
+        return list(self.segments)
     
     def is_clicked(self,pos):
-        """ Checks to see if the interior of the wire is clicked. """
+        """ Check to see if the wire is clicked. """
         
-        #
-        # Changes when segments are used.
-    
-        pos_A , pos_B = self.get_endpoints()
-        
-        if pos_A[0] > pos_B[0]:
-            pos_C = list(pos_B)
-            pos_B = list(pos_A)
-            pos_A = list(pos_C)
-           
-        center = self.center * pos_A[0] + (1 - self.center) * pos_B[0]
-        
-        # check first bar 
-        check_x = pos_A[0] < pos[0] < center
-        check_y = -5 < pos[1] - pos_A[1] < 5
-        if check_x and check_y:
-            return True
-        # check last bar
-        check_x = center < pos[0] < pos_B[0]
-        check_y = -5 < pos[1] - pos_B[1] < 5
-        if check_x and check_y:
-            return True
-        # check middle bar
-        if pos_A[1] < pos_B[1]:
-            check_y = pos_A[1] < pos[1] < pos_B[1]
-        else:
-            check_y = pos_B[1] < pos[1] < pos_A[1]
-        check_x = -5 < pos[0] - center < 5
-        if check_x and check_y:
-            return True
-        
+        for segment in self.segments:
+            if segment.is_clicked(pos,self.sensitivity):
+                return True
+            
         return False
-
-
+    
+    def reset_pads(self):
+        
+        if not self.input:
+            
+            self.segments[0].set_starting_position((self.x,self.y))
+        
+        elif not self.output:
+            
+            self.segments[-1].set_ending_position((self.x,self.y))
+            
+        self.initial_segments()
+    
+    def update_input(self):
+        
+        self.segments[0].set_position(self.input.get_position())
+        self.segments[0].set_starting_position(self.input.get_position())
+        
+    def update_output(self):
+        
+        self.segments[-1].set_position(self.output.get_position())
+        self.segments[-1].set_ending_position(self.output.get_position())
+    
     def evaluate(self):
         """ Passes the input state to the output state in the evaluation
             chain.
@@ -821,57 +945,36 @@ class LogicWire(LogicElement):
         
         return pos_A , pos_B
         
-    
-
     def initial_segments(self):
         
         posA , posZ = self.get_endpoints()
-        
-        if posA[1] == posZ[1]:
-            
-            self.segments = [Segment(posA,posZ)]
-            
-        else:
-            
-            midpoint = (posA[0] + posB[0])/2
-            
-            posK = (midpoint,posA[1])
-            posL = (midpoint,posB[1])
-            
-            segmentA = Segment(posA,posK)
-            segmentK = Segment(posK,posL)
-            segmentZ = Segment(posL,posZ)
-            
-            segmentA.set_end(segmentK)
-            segmentK.set_end(segmentZ)
-            segmentK.set_start(segmentA)
-            segmentZ.set_start(segmentZ)
-    
-    def draw(self,screen):
-        """ Draws the wire between nodes. """
-        
-        if self.locked:
-            
-            self.draw_static(screen)
-        
-        else:
-            
-            pos_A , pos_B = self.get_endpoints()
            
-            center = self.center * pos_A[0] + (1 - self.center) * pos_B[0]
-            center_A = ( center , pos_A[1] )
-            center_B = ( center , pos_B[1] )
+        midpoint = (posA[0] + posZ[0])/2
             
-            pg.draw.line(screen,BLACK,pos_A,center_A,5)
-            pg.draw.line(screen,BLACK,center_A,center_B,5)
-            pg.draw.line(screen,BLACK,center_B,pos_B,5)
+        posK = (midpoint,posA[1])
+        posL = (midpoint,posZ[1])
             
-            pg.draw.line(screen,self.color,pos_A,center_A,3)
-            pg.draw.line(screen,self.color,center_A,center_B,3)
-            pg.draw.line(screen,self.color,center_B,pos_B,3)
+        segmentA = Segment(posA,posK)
+        segmentK = Segment(posK,posL)
+        segmentZ = Segment(posL,posZ)
             
-            for clasp in self.clasps:
-                clasp.draw(screen)
+        segmentA.set_end(segmentK)
+        segmentK.set_end(segmentZ)
+        segmentK.set_start(segmentA)
+        segmentZ.set_start(segmentK)
+        
+        self.segments = [segmentA,segmentK,segmentZ]
+        
+    def draw(self,screen):
+        
+        for segment in self.segments:
+            segment.draw_dark(screen)
+        
+        for segment in self.segments:
+            segment.draw_light(screen)
+            
+        for clasp in self.clasps:
+            clasp.draw(screen)
     
 class LogicNot(LogicElement):
     """ A two terminal Not gate. """

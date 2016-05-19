@@ -1570,7 +1570,7 @@ def login(screen,game):
     name = ""
     ready = False
     
-    out = "Logic Lights Version "+VERSION+", 5/13/2016"
+    out = "Logic Lights Version "+VERSION
     screen_size = screen.get_size()
     background = blank_background(screen_size,BLACK)
     
@@ -1587,10 +1587,10 @@ def login(screen,game):
         y += 150
         screenprint(screen,"Enter Your Name: " + name,(x,y),24,WHITE)
         
-        x = screen_size[0] - 7 * len(out) 
-        y = screen_size[1] - 22
+        x = screen_size[0] - 5 * len(out) 
+        y = screen_size[1] - 14
         
-        screenprint(screen,out,(x,y),18,WHITE)
+        screenprint(screen,out,(x,y),12,WHITE)
         pg.display.update()
         
         events = pg.event.get()
@@ -1957,7 +1957,7 @@ def game(screen,player):
                 player.save()
                 exit()
             if event.type == MOUSEBUTTONDOWN:
-                check_pos = pg.mouse.get_pos()
+                check_pos = pg.mouse.get_pos()  
                 
                 if check_pos[0] < 150 and 550 < check_pos[1] < 575:
                     
@@ -1994,7 +1994,10 @@ def game(screen,player):
                     
                     if wire.is_clicked(check_pos):
                         
-                        print "clicked."
+                        cursor = wire.get_segment(check_pos)
+                        segments = wire.get_segments()
+                        if cursor in (segments[0],segments[-1]):
+                            cursor = None
                 
                 for thing in buttons + lights + program:
                     
@@ -2027,27 +2030,19 @@ def game(screen,player):
                 check_pos = pg.mouse.get_pos()
                 do_update = True
                 
-                if cursor:
+                
+                if cursor and not cursor.gate_type():
+                    cursor = None
+                elif cursor:
                     
                     #
                     # Toss it in the garbage?
                     #
                     
-                    if garbage.is_clicked(check_pos):
-                        
-                        if cursor.get_type() == "Wire":
-                                 
-                            return_space = None
-                            cursor.deregister()
-                            wires.remove(cursor)
-                             
-                        else:
-                            
-                            cursor.desolder(wires) 
-                            program.remove(cursor)
+                    in_garbage = garbage.is_clicked(check_pos)
                     
                     #
-                    # Choose from a factory?
+                    # Return to a  factory?
                     #
                     
                     for factory in factories:
@@ -2079,30 +2074,29 @@ def game(screen,player):
                     # Is it placed in play?
                     #
                     
-                    if not ( test_x and test_y ) and cursor.get_type() != "Wire":
+                    if not ( test_x and test_y ) and not in_garbage:
                         
                         if return_space:
                             
                             cursor.set_position(return_space)
+                            
                         else: 
                             
                             if cursor in program:
                                 program.remove(cursor)
                     
-                    #
                     # Is the cursor a wire?
-                    #
-                    
                     if cursor.get_type() == "Wire":
                         
                         found = False
                         
                         # Delete a wire placed in the trash.
-                        if garbage.is_clicked(check_pos):
+                        if in_garbage:
                         
                             return_space = None
-                            found = True
-                        
+                            cursor.deregister()
+                            wires.remove(cursor)
+                         
                         # Delete a wire with both ends at the same terminal.    
                         elif cursor.get_pads():
                             
@@ -2161,14 +2155,21 @@ def game(screen,player):
                             else:
                                 
                                 cursor.deregister()
-                                wires.remove(cursor)
+                                if cursor in wires:
+                                    wires.remove(cursor)
                     
+                    # The cursor is a logic element. 
                     else:
-                        # Direct connection between two elements?
 
                         placed = []
                         
-                        
+                        # Delete an element?
+                        if in_garbage:
+                            
+                            cursor.desolder(wires) 
+                            program.remove(cursor)
+                    
+                        # Direct connection between two elements?
                         for thing in buttons + lights + program:
                             
                             for pad1 in cursor.get_pads():
@@ -2204,9 +2205,10 @@ def game(screen,player):
                             pad1 , pad2 = pair
                         
                             new_wire = LogicWire(pad1)
-                            pad1.set_connector(new_wire)
                             new_wire.connect(pad2)
+                            pad1.set_connector(new_wire)
                             wires.append(new_wire)
+                            new_wire.initial_segments()
                                 
                             new_wire = None
                         
