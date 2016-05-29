@@ -114,6 +114,45 @@ class PlayArea:
                     
                     return wire
     
+
+class ColorScheme:
+    
+    def __init__(self):
+        
+        pass
+        
+    def set_background(self,color):
+        
+        self.bg = color
+    
+    def set_outline(self,color):
+        
+        self.oc = color
+        
+    def set_interior(self,color):
+        
+        self.ic = color
+        
+    def set_text(self,color):
+        
+        self.text = color
+        
+    def get_background(self):
+        
+        return self.bg 
+    
+    def get_outline(self):
+        
+        return self.oc
+        
+    def get_interior(self):
+        
+        return self.ic
+        
+    def get_text(self):
+        
+        return self.text
+
 def blank_background(size,color = (0,0,0)):
     
     background = pg.Surface(size)

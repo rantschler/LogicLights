@@ -27,7 +27,7 @@ key_dic = { K_SPACE : " ", K_MINUS : "-",
             K_u : "U", K_v : "V", K_w : "W", K_x : "X", K_y : "Y",
             K_z : "Z" }
 
-VERSION = "W0.3"
+VERSION = "W0.3b"
 
 #
 # CLASSES
@@ -548,7 +548,6 @@ class Tutorial:
         n = 0
         for level in self.levels:
             n += 1
-            # print n,str(level.get_level())+"-"+str(level.get_puzzle())
         
     def load(self,tutorial = None):
         """ Loads the tutorial from a text file. """
@@ -610,15 +609,6 @@ class Tutorial:
                 
         read_file.close()
         
-##     def play(self):
-##         #
-##         # Is this used?
-##         #
-##         
-##         print "play(self) used in tutorial."
-##         
-##         return self.levels[self.current]
-##         
     def get_level(self):
         """ Returns the active tutorial level. """
         
@@ -1950,6 +1940,10 @@ def game(screen,player):
         ## Call the control() function to control the avatar.
         #
         
+        if cursor:
+            
+            cursor.set_position(pg.mouse.get_pos())
+            
         events = pg.event.get()
         for event in events:
             if event.type == QUIT:
@@ -1984,20 +1978,22 @@ def game(screen,player):
                         
                 for wire in wires:
                     
+                    found = False
+                    
                     for clasp in list(wire.get_clasps()):
                         
                         if clasp.is_clicked(check_pos):
                             
                             cursor = wire.remove_clasp(clasp)
                             return_space = clasp
-                            
-                    
-                    if wire.is_clicked(check_pos):
+                            found = True
+
+                    if not found and wire.is_clicked(check_pos):
                         
                         cursor = wire.get_segment(check_pos)
                         segments = wire.get_segments()
                         if cursor in (segments[0],segments[-1]):
-                            cursor = None
+                            wire.append_segment(cursor)
                 
                 for thing in buttons + lights + program:
                     
@@ -2013,6 +2009,7 @@ def game(screen,player):
                             else:
                             
                                 cursor = LogicWire(pad)
+                                cursor.set_position(check_pos)
                                 pad.set_connector(cursor)
                                 wires.append(cursor)
                                 return_space = None
@@ -2029,7 +2026,6 @@ def game(screen,player):
                 
                 check_pos = pg.mouse.get_pos()
                 do_update = True
-                
                 
                 if cursor and not cursor.gate_type():
                     cursor = None
@@ -2096,6 +2092,7 @@ def game(screen,player):
                             return_space = None
                             cursor.deregister()
                             wires.remove(cursor)
+                            found = True
                          
                         # Delete a wire with both ends at the same terminal.    
                         elif cursor.get_pads():
@@ -2125,7 +2122,7 @@ def game(screen,player):
                                     if clicked and not ( wired and is_input ):
                                     
                                         if cursor.connect(pad):
-                                        
+                                            cursor.force_update()
                                             found = True
                             
                             # Attach a probe to a wire and an output wire to
@@ -2135,13 +2132,13 @@ def game(screen,player):
                                 for wire in wires:
                                     
                                     is_self = wire == cursor
+                                    clicked = wire.is_clicked(check_pos)
                                     
-                                    if wire.is_clicked(check_pos) and not is_self:
+                                    if clicked and not is_self:
+
                                         clasp = wire.add_clasp(check_pos)
                                         cursor.connect(clasp)
                                         found = True
-                        
-                        
                         
                         if not found:
                             
@@ -2149,9 +2146,9 @@ def game(screen,player):
                                 
                                 cursor.connect(return_space)
                                 if return_space.is_clasp():
-                                    return_space.get_owner().append_clasp(return_space)
+                                    return_space.get_owner().append_clasp(return_space)     
+
                         
-                            
                             else:
                                 
                                 cursor.deregister()
@@ -2212,12 +2209,17 @@ def game(screen,player):
                                 
                             new_wire = None
                         
+                        if not placed:
+                            
+                            cursor.set_position(check_pos)
+                        
+                        else:
+                            
+                            cursor.reset_pads()
+                        
                     return_space = None
                     cursor = None
                         
-        if cursor:
-            
-            cursor.set_position(pg.mouse.get_pos())
         
         if do_update:
             for light in lights:
