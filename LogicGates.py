@@ -482,10 +482,10 @@ class LogicClasp(Pad):
     
     def delete(self):
         
-        more_wires = []
+        more_wires = list(self.connector)
         for wire in self.connector:
             more_wires += wire.deregister()
-        return list(self.connector + more_wires)
+        return more_wires
     
     def draw(self,screen):
         """ Draws the clasp, which looks like a connected pad. """
@@ -651,6 +651,7 @@ class LogicElement:
             if wire:
                 wires += [wire]
                 wires += wire.deregister()
+        wires = list(set(wires))
         for wire in wires:
             wire_list.remove(wire)
         

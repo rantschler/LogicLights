@@ -1976,18 +1976,20 @@ def game(screen,player):
                         
                         player.get_tutorial().advance_message()
                         
+                found = False
+                
                 for wire in wires:
-                    
-                    found = False
                     
                     for clasp in list(wire.get_clasps()):
                         
-                        if clasp.is_clicked(check_pos):
+                        if not found and clasp.is_clicked(check_pos):
                             
                             cursor = wire.remove_clasp(clasp)
                             return_space = clasp
                             found = True
-
+                
+                for wire in wires:
+                    
                     if not found and wire.is_clicked(check_pos):
                         
                         cursor = wire.get_segment(check_pos)
@@ -2145,10 +2147,10 @@ def game(screen,player):
                             if return_space:
                                 
                                 cursor.connect(return_space)
+                                cursor.set_position(return_space.get_position())
                                 if return_space.is_clasp():
                                     return_space.get_owner().append_clasp(return_space)     
 
-                        
                             else:
                                 
                                 cursor.deregister()
