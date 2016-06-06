@@ -27,7 +27,7 @@ key_dic = { K_SPACE : " ", K_MINUS : "-",
             K_u : "U", K_v : "V", K_w : "W", K_x : "X", K_y : "Y",
             K_z : "Z" }
 
-VERSION = "W0.3b"
+VERSION = "W0.3c"
 
 #
 # CLASSES
@@ -2225,7 +2225,6 @@ def game(screen,player):
         
         if do_update:
             for light in lights:
-                light.clear()
                 win = light.evaluate(buttons)
             do_update = False
               

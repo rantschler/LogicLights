@@ -1,9 +1,27 @@
 import pygame as pg
 import LogicGates
 
+SCALE = 13
+WIDTH = 9
+HEIGHT = 4
+
+DARK_GRAY = (169,169,169)
+DIM_GRAY = (105,105,105)
+GRAY = (128,128,128)
+BLACK = (0,0,0)
+WHITE = (255,255,255)
+YELLOW = (255,255,0)
+GREEN = (0,128,0)
+RED = (255,0,0)
+BLUE = (0,0,255)
+DARK_RED = (191,0,0)
+BLACK_RED = (64,0,0)
+BLACK_GREEN = (0,32,0)
+BLACK_BLUE = (0,0,64)
+
 class Screen:
     
-    def __init__(self,name,game):
+    def __init__(self,name,game,colors = None):
         
         self.name = name
         
@@ -11,8 +29,13 @@ class Screen:
         
         self.area = None
         
-        size = (900,600)
-        self.background = blank_background(size,(0,0,0))
+        if colors == None:
+            self.colors = ColorScheme()
+        else:
+            self.colors = colors
+            
+        self.size = (900,600)
+        self.background = blank_background(self.size,self.colors.get_background())
     
     def get_background(self):
         
@@ -21,7 +44,11 @@ class Screen:
     def set_backgound(self,background):
         
         self.background = background
+    
+    def get_colors(self):
         
+        return self.game.get_colors()
+    
     def get_play_area(self):
         
         return self.play_area
@@ -37,6 +64,41 @@ class Screen:
         if self.area:
             
             self.area.draw(screen)
+
+class Scales:
+    """ Keeps track of scales on the screen, doing interesting mathematics
+        so that you don't have to. 
+    """
+    
+    def __init__(self , screens , scale ):
+        
+        self.screen_width = screens[0]
+        self.screen_height = screens[1]
+    
+        self.element_width = 9
+        self.element_height = 4
+    
+        self.scale = scale
+    
+    def set_scale(self,size):
+        
+        self.scale = size
+    
+    def get_scale(self):
+    
+        return self.scale
+    
+    def get_screen_size(self):
+        
+        return (self.screen_width,self.screen_height)
+    
+    def get_element_size(self):
+
+        x = scale * self.element_width
+        y = scale * self.element_height
+        
+        return (x,y)
+    
 
 class TextBox:
     
@@ -116,8 +178,19 @@ class PlayArea:
     
 
 class ColorScheme:
+    """ Defines a color scheme for the game. """
     
     def __init__(self):
+        """ Set default colors for the color scheme. """
+        
+        self.bg = BLACK         # Background Color Default
+        self.oc = DARK_GRAY     # Outline Color Default
+        self.ic = GRAY          # Interior Color Default
+        self.title = YELLOW     # Title Color Default
+        self.text = WHITE       # Text Color Default
+        self.on = RED           # Color when puzzle should be on
+        self.off = DARK_RED     # Color when puzzle should be off
+        self.light = YELLOW     # Color when player's answer should be on
         
         pass
         
@@ -137,6 +210,30 @@ class ColorScheme:
         
         self.text = color
         
+    def set_off(self,color):
+        
+        self.off = color
+    
+    def set_on(self,color):
+        
+        self.on = color
+        
+    def set_light(self,color):
+        
+        self.light = color
+    
+    def get_light(self,color):
+        
+        return self.light
+    
+    def get_on(self,color):
+        
+        return self.on
+    
+    def get_off(self,color):
+        
+        return self.off
+        
     def get_background(self):
         
         return self.bg 
@@ -153,6 +250,7 @@ class ColorScheme:
         
         return self.text
 
+    
 def blank_background(size,color = (0,0,0)):
     
     background = pg.Surface(size)

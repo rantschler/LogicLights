@@ -1,5 +1,6 @@
 import pygame as pg
 from LogicLogic import *
+from LogicScreen import *
 
 SCALE = 13
 WIDTH = 9
@@ -33,6 +34,9 @@ LETTER_OFF = BLACK
 ## LETTER_ON = BLACK
 ## LETTER_OFF = WHITE
 
+#
+# ELEMENT CLASSES 
+#
 class Segment:
     """ Creates a horizontal or vertical segment of wire. 
         This is always a part of a LogicWire element and is used to 
@@ -330,7 +334,7 @@ class Pad:
             
             return False
 
-    def evaluate(self):
+    def evaluate(self, previous = []):
         """ Passes the pad through the evaluation chain. """
         
         if not self.connector:
@@ -339,11 +343,11 @@ class Pad:
         
         if self.type == "Input":
             
-            value = self.connector.evaluate()
+            value = self.connector.evaluate(previous)
         
         else:
             
-            value = self.container.evaluate()
+            value = self.container.evaluate(previous)
             
         return value
 
@@ -385,6 +389,24 @@ class Pad:
         
         return ( self.x , self.y )
 
+    def set_renderers(self,renderer):
+        """ Sets the renderer for the pad. """
+        
+        self.renderer = renderer
+    
+    def draw_new(self,screen):
+        
+        x = self.x - self.renderer.get_main().get_size()//2
+        y = self.y - self.renderer.get_main().get_size()//2
+        
+        if self.connector:
+            
+            screen.blit(self.renderer.get_main(),(x,y))
+        
+        else:
+            
+            screen.blit(self.renderer.get_secondary(),(x,y))
+        
     def draw(self,screen):
         """ Draws the pad, open if unconnected or closed when connnected. """
         if self.connector:
@@ -611,7 +633,7 @@ class LogicElement:
         
         self.reset_pads()
     
-    def evaluate(self):
+    def evaluate(self,previous):
         """ Evaluates the value of the device in the """ 
         
         return None
@@ -934,14 +956,14 @@ class LogicWire(LogicElement):
         
         self.update_clasps()
     
-    def evaluate(self):
+    def evaluate(self,previous = []):
         """ Passes the input state to the output state in the evaluation
             chain.
         """
         
         if self.input:
             
-            return self.input.evaluate()
+            return self.input.evaluate(previous)
         
         else:
             
@@ -1108,12 +1130,17 @@ class LogicNot(LogicElement):
         
         return None
         
-    def evaluate(self):
+    def evaluate(self,previous = []):
         """ Evaluation behavior for the gate when determining logic flow 
             from the switches. 
         """
         
-        value = self.input.evaluate()
+        if self in previous:
+            return None
+        
+        previous.append(self)
+        
+        value = self.input.evaluate(previous)
         
         if value != None:
         
@@ -1201,12 +1228,17 @@ class LogicOr(Logic3Terminal):
             
         return None    
     
-    def evaluate(self):
+    def evaluate(self,previous = []):
         """ Evaluates the value of the gate using its inputs. """
         
-        value_A = self.input_A.evaluate()
+        if self in previous:
+            return None
+        
+        previous.append(self)
+        
+        value_A = self.input_A.evaluate(previous)
             
-        value_B = self.input_B.evaluate()
+        value_B = self.input_B.evaluate(previous)
         
         if value_A != None and value_B != None:
             
@@ -1264,14 +1296,19 @@ class LogicAnd(Logic3Terminal):
             
         return None
     
-    def evaluate(self):
+    def evaluate(self,previous = []):
         """ Evalutes the value of the gate using the values of its 
             terminals. 
         """
         
-        value_A = self.input_A.evaluate()
+        if self in previous:
+            return None
+        
+        previous.append(self)
+        
+        value_A = self.input_A.evaluate(previous)
             
-        value_B = self.input_B.evaluate()
+        value_B = self.input_B.evaluate(previous)
         
         if value_A != None and value_B != None:
             
@@ -1450,7 +1487,7 @@ class LogicLight(LogicElement):
         else:
             self.answer_value = self.program.evaluate()
         
-        self.user_value = self.input.evaluate()
+        self.user_value = self.input.evaluate([self])
     
         if buttons and self.user_value != None:
             
@@ -1572,7 +1609,7 @@ class LogicSwitch(LogicElement):
         
         return self
     
-    def evaluate(self):
+    def evaluate(self,previous = []):
         """ Pretends to do an evaluation, but instead just returns the 
             status of the button. """
             
@@ -1658,6 +1695,79 @@ class LogicSwitch(LogicElement):
 
 
 
+#
+# DRAWING CONTAINER
+#
+
+class Drawer:
+    """ A shell class for making drawings. """
+    
+    def __init__(self,game,function1,function2 ):
+    
+        self.game = game
+    
+        self.first_renderer = function1
+        self.second_renderer = function2
+    
+        self.render()
+            
+    def get_main(self):
+        
+        return self.open
+    
+    def get_secondary(self):
+        
+        return self.closed
+        
+    def render(self):
+        
+        self.main = self.first_renderer(self.game)
+        if self.second_renderer:
+            self.closed = self.second_renderer(self.game)
+        else:
+            self.closed = None
+    
+#
+# NEW DRAWING FUNCTIONS
+#
+
+def draw_wired_pad(game):
+    
+    scale = game.get_scale()
+    color = game.get_template().get_outline()
+    
+    if scale / 2.0 == scale // 2:
+        scale += 1
+        
+    size = ( scale , scale )
+    container = pg.Surface(size)
+    
+    r = scale // 2
+    pos = ( r + 1 , r + 1 )
+    center = ( size[0] // 2 , size[1] // 2 )
+    
+    pg.draw.circle(container,color,pos,r)
+    
+    container.set_colorkey((0,0,0))
+    
+    return container
+    
+def draw_open_pad(game):
+    
+    container = draw_closed_pad(screen,scale)
+    
+    r = scale // 4
+    pos = ( r + 1 , r + 1 )
+    
+    color = game.get_template().get_background()
+    
+    pg.draw.circle(container,color,pos,r)
+    
+    return container
+
+#
+# DRAWING FUNCTIONS
+#
 def draw_switch_base(color1 = None, color2 = None,color3 = None):
     """ Draws out the switch. """
     
