@@ -29,17 +29,26 @@ class Screen:
         
         self.area = None
         
+        self.buttons = []
+        self.labels = []
+        
         if colors == None:
             self.colors = ColorScheme()
         else:
             self.colors = colors
             
         self.size = (900,600)
+        
         self.background = blank_background(self.size,self.colors.get_background())
-    
+        self.foreground = blank_background(self.size,None)
+        
     def get_background(self):
         
         return self.background
+    
+    def get_foreground(self):
+        
+        return self.foreground
     
     def set_backgound(self,background):
         
@@ -52,10 +61,26 @@ class Screen:
     def get_play_area(self):
         
         return self.play_area
+    
+    def get_buttons(self):
         
+        return self.buttons
+    
+    def get_label(self,label):
+        
+        return self.labels[label]
+    
+    def add_label(self,label):
+        
+        self.labels.append(label)
+    
     def set_play_area(self,corner,area):
         
         self.area = PlayArea(corner,area,self)
+   
+    def add_buttons(self,button):
+        
+        self.buttons.append(button)
    
     def draw(self,screen):
         
@@ -64,6 +89,14 @@ class Screen:
         if self.area:
             
             self.area.draw(screen)
+            
+        for button in self.buttons:
+            
+            button.draw(screen)
+        
+        for label in self.labels:
+            
+            label.draw(screen)
 
 class Scales:
     """ Keeps track of scales on the screen, doing interesting mathematics
@@ -125,12 +158,37 @@ class TextBox:
         self. message = outputfont.render(message,1,color)
     
     def draw(self,screen):
-        
-        
-        
+   
         screen.blit(self.message,pos)
 
+class Message:
+    
+    def __init__(self,pos,static,dynamic = None):
         
+        self.x = pos[0]
+        self.y = pos[1]
+        self.base = static
+        self.end = dynamic
+        
+        self.size = 20
+    
+    def set_size(self,size):
+        
+        self.size = size
+    
+    def update_variable(self,variable):
+        
+        self.end = variable
+    
+    def render(self):
+        
+        message = self.base + " " + self.end
+        self.message = make_label(message,self.size)
+    
+    def draw(self,screen):
+        
+        self.render()
+        screen.blit(self.message,(self.x,self.y))
         
     
 class PlayArea:
@@ -253,9 +311,34 @@ class ColorScheme:
     
 def blank_background(size,color = (0,0,0)):
     
+    if color == None:
+        color = (1,1,1)
+    
     background = pg.Surface(size)
     background.convert()
     background.fill(color)
     
+    if color == (1,1,1):
+        background.set_colorkey((1,1,1))
+    
     return background
+
+def make_label(message,size = 20,color = WHITE,font="Arial"):
+    
+    outputfont = pg.font.SysFont(font,size)
+    
+    return outputfont.render(message,1,color)
+    
+
+def centered(graphic,area):
+    
+    size = graphic.get_size()
+    position = ( area[0] // 2 - size[0] // 2 , area[1] // 2 - size[1] // 2 )
+    container = pg.Surface(area)
+    container.blit(graphic,position)
+    
+    return container
+    
+    
+    
     

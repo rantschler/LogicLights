@@ -27,7 +27,7 @@ key_dic = { K_SPACE : " ", K_MINUS : "-",
             K_u : "U", K_v : "V", K_w : "W", K_x : "X", K_y : "Y",
             K_z : "Z" }
 
-VERSION = "W0.3c"
+VERSION = "W0.4"
 
 #
 # CLASSES
@@ -236,7 +236,7 @@ class Scrollbar:
 class Button:
     """ Buttons for the scrollbar. """
     
-    def __init__(self,size,pos,owner):
+    def __init__(self,size,pos = (0,0),owner = None):
         
         self.x = pos[0]
         self.y = pos[1]
@@ -247,6 +247,10 @@ class Button:
         self.owner = owner
         
         self.action = None
+        
+        self.outline = BLACK   
+        self.size = 1
+        self.fill = GRAY
     
         self.ornament = None
     
@@ -267,6 +271,17 @@ class Button:
         self.x = pos[0]
         self.y = pos[1]
     
+    def set_border(self,color,thickness = None):
+        
+        self.outline = color
+        
+        if thickness:
+            self.size = thickness
+    
+    def set_interior(self,color):
+        
+        self.fill = color
+        
     def set_ornament(self,decoration):
         """ Place a drawing in the button. """
         
@@ -276,7 +291,8 @@ class Button:
         """ Set the functionality of the button. """
         
         self.action = action
-        
+    
+    
     def activate(self):
         """ Perform the action stored in self.action """
         
@@ -288,17 +304,21 @@ class Button:
         
         ulc = (self.x,self.y)
         llc = (self.x,self.y+self.h)
+        lrc = (self.x+self.w,self.y+self.h)
         
         size = (self.w,self.h)
         
-        
-        pg.draw.rect(screen,GRAY,(ulc,size))
-        pg.draw.line(screen,BLACK,ulc,(ulc[0]+self.w,ulc[1]),1)
-        pg.draw.line(screen,BLACK,llc,(llc[0]+self.w,llc[1]),1)
-        
+        if self.fill:
+            pg.draw.rect(screen,self.fill,(ulc,size))
+##         
+##         pg.draw.line(screen,self.outline,ulc,(ulc[0]+self.w,ulc[1]),1)
+##         pg.draw.line(screen,self.outline,llc,(llc[0]+self.w,llc[1]),1)
+##         
         if self.ornament:
             
             screen.blit(self.ornament,(self.x,self.y))
+        
+        pg.draw.rect(screen,self.outline,(ulc,size),self.size)
         
 
 class LevelBox:
@@ -798,7 +818,7 @@ class Dude:
         self.tutorial = None
         self.tutorial_active = False
 
-      
+        self.result = None
 
     def initialize_levels(self,x,y,size):
         
@@ -930,7 +950,14 @@ class Dude:
         
         self.tutorial = False
         
-    
+    #
+    # Getters and Setters
+    #
+
+    def get_result(self):
+        
+        return self.result
+        
     def get_levels(self):
         
         return tuple(self.levels)
@@ -973,15 +1000,23 @@ class Dude:
     def add_level(self,level):
         
         self.levels.append(level)
+    
+    def clear_result(self):
         
+        self.result = None
+    
     def mark_win(self):
         """ Registers a win in the level list. """
+        
+        self.result = True
         
         self.levels[self.level - 1].set_puzzle_value(self.puzzle,True)
         self.levels[self.level - 1].make_list()
         
     def mark_loss(self):
         """ Registers that a level has been tried but not won. """
+        
+        self.result = False
         
         if not self.levels[self.level - 1].get_puzzle_value(self.puzzle):
             
@@ -1281,6 +1316,10 @@ def mix_colors(color1,color2,percent):
     return ( new_R , new_G , new_B )
 
 
+
+def logout():
+    self.owner.logout()
+
 #
 # MVC CLASSES
 #
@@ -1302,7 +1341,10 @@ class Game:
         self.name = ""
         self.player = None
         
-        self.scale = 27
+        self.size = (900,600)
+        
+        scale = 13
+        self.scale = Scales( self.size , scale )
         
         self.state = 0
         self.states = []
@@ -1310,20 +1352,32 @@ class Game:
         self.factories = []        
         self.generate_factories()
         
-        garbage_location = (30*self.scale,16* self.scale)
-        garbage_size = (3*self.scale,4* self.scale)
-        self.garbage = Garbage(garbage_location,garbage_size)
+        garbage_location = ( 30 * scale , 16 * scale )
+        garbage_size = ( 3 * scale , 4 *  scale )
+        self.garbage = Garbage( garbage_location , garbage_size )
         
         self.elements = []
     
-    def get_state(self):
+    def get_background(self):
         
-        return self.state
+        return self.states[self.state].get_background()
+        
+    def get_state(self,state = None):
+        
+        if not state:
+            state = self.state
+            
+        return self.states[state]
     
     def get_player(self):
         
         return self.player
     
+    
+    def set_state(self,state):
+        
+        self.state = state
+        
     def login(self,player):
         
         self.name = player.get_name()
@@ -1338,7 +1392,7 @@ class Game:
         
         self.state += 1
         
-        if state > 3:
+        if state >= len(self.states):
             player.clear_puzzle()
             state = 1
     
@@ -1346,7 +1400,9 @@ class Game:
         
         if type(screen) == str:
             
-            new_screen = Screen(screen,self)
+            screen = Screen(screen,self)
+        
+        self.states.append(screen)
         
     def current_screen(self):
         
@@ -1358,20 +1414,22 @@ class Game:
         
     def generate_factories(self):
         
+        scale = self.scale.get_scale()
+        
         self.factories = []
         
-        x = self.scale * 9 
-        y = self.scale * 17
+        x = scale * 9 
+        y = scale * 17
     
-        x += self.scale * 11
+        x += scale * 11
     
         self.factories.append(Factory(LogicNot,(x,y),self.scale))
     
-        x += self.scale * 11
+        x += scale * 11
     
         self.factories.append(Factory(LogicOr,(x,y),self.scale))
     
-        x += self.scale * 11
+        x += scale * 11
     
         self.factories.append(Factory(LogicAnd,(x,y),self.scale))
     
@@ -1525,7 +1583,6 @@ def view(screen,background,avatar = None,things = [],foreground = None):
     out = str(pg.mouse.get_pos())
     
     screenprint(screen,out,(5,575))
-    screenprint(screen,"Retire",(5,550))
     
     x= 300
     y = 525
@@ -1557,30 +1614,25 @@ def login(screen,game):
     """ Creates the login screen. """
     
     game.logout()
-    name = ""
-    ready = False
-    
-    out = "Logic Lights Version "+VERSION
+    game.set_state(0)
+    middle = game.get_state()
+    middle.clear()
     screen_size = screen.get_size()
-    background = blank_background(screen_size,BLACK)
+    
+    x = screen_size[0] // 2 - 150
+    y = screen_size[1] // 4 + 150
+        
+    name = ""
+    middle.add_label(Message((x,y),"Enter Your Name:",name))
+    middle.get_label(0).set_size(24)
+    middle.get_label(0).render()
+    
+    ready = False
     
     while not ready :
         
-        x = screen_size[0] // 2 - 50
-        y = screen_size[1] // 4
+        middle.draw(screen)
         
-        screen.blit(background,(0,0))
-        
-        screenprint(screen,"Logic Lights",(x,y),36,YELLOW)
-            
-        x -= 100
-        y += 150
-        screenprint(screen,"Enter Your Name: " + name,(x,y),24,WHITE)
-        
-        x = screen_size[0] - 5 * len(out) 
-        y = screen_size[1] - 14
-        
-        screenprint(screen,out,(x,y),12,WHITE)
         pg.display.update()
         
         events = pg.event.get()
@@ -1594,6 +1646,7 @@ def login(screen,game):
                     ready = True
                 elif event.key == K_BACKSPACE:
                     name = name[:-1]
+                middle.get_label(0).update_variable(name)
                     
     player = Dude(name)
     player.initialize()
@@ -1735,12 +1788,18 @@ def splash(screen,game):
     player = game.get_player()
     player.save()
     
+    
+    
     wait = True
     name = player.get_name()
     
-    level = 3
-    puzzle = random.choice(range(4**3))
-    
+    button_size = (75,30)
+    logout_button = Button((75,30),(825,0),game)
+    logout_button.set_action(game.logout)
+    logout_button.set_interior(BLACK)
+    logout_button.set_border(WHITE)
+    logout_button.set_ornament(centered(make_label("Logout"),button_size))
+   
     screen_size = screen.get_size()
     background = blank_background(screen_size,BLACK)
     
@@ -1759,8 +1818,8 @@ def splash(screen,game):
         
         screen.blit(background,(0,0))
         screenprint(screen,"Player: " + name)
-        screenprint(screen,"Logout",(840,0))
         screenprint(screen,"Logic Lights",(x,y),36,YELLOW)
+        logout_button.draw(screen)
         
         for level in levels:
             level.draw(screen,(0,0))
@@ -1779,7 +1838,7 @@ def splash(screen,game):
                 field.imprint(draw_field,background)
                 
             check_pos = pg.mouse.get_pos()
-            if event.type == MOUSEBUTTONDOWN: # or event.type == KEYDOWN:
+            if event.type == MOUSEBUTTONDOWN: 
                 
                 for level in levels:
                     if level.is_clicked(check_pos):
@@ -1797,10 +1856,10 @@ def splash(screen,game):
                             wait = False
                     else:
                         level.click_internals(check_pos)
-            
-                if check_pos[0] > 825 and check_pos[1] < 30:
                 
-                    game.logout()
+                if logout_button.is_clicked(check_pos):
+                
+                    logout_button.activate()
                 
                     return "Logout"
                 
@@ -1831,6 +1890,15 @@ def game(screen,player):
     #
     # Initialize game objects and loop variables
     #
+    
+    player.clear_result()
+    
+    button_size = (75,30)
+    retire_button = Button(button_size,(0,525))
+    retire_button.set_action(player.mark_loss)
+    retire_button.set_interior(BLACK)
+    retire_button.set_border(WHITE)
+    retire_button.set_ornament(centered(make_label("Retire"),button_size))
     
     #
     # Active Area
@@ -1919,7 +1987,7 @@ def game(screen,player):
     #
     # Main loop for MVC game control.
     # 
-    while win == None:
+    while player.get_result() == None:
         #
         # Update the time at the beginning of the loop.
         #
@@ -1931,7 +1999,7 @@ def game(screen,player):
         ## Send objects to the view function.
         #
         
-        things = buttons + program + factories + lights + wires + [garbage]
+        things = buttons + program + factories + lights + wires + [garbage,retire_button]
         view(screen,background,player,things)
         
         #
@@ -1953,9 +2021,9 @@ def game(screen,player):
             if event.type == MOUSEBUTTONDOWN:
                 check_pos = pg.mouse.get_pos()  
                 
-                if check_pos[0] < 150 and 550 < check_pos[1] < 575:
+                if retire_button.is_clicked(check_pos):
                     
-                    win = False
+                    retire_button.activate()
                 
                 for object in buttons:
                     
@@ -2226,17 +2294,12 @@ def game(screen,player):
         if do_update:
             for light in lights:
                 win = light.evaluate(buttons)
+                if win:
+                    player.mark_win()
+                    if player.in_tutorial():
+                        player.advance_tutorial()
+                    
             do_update = False
-              
-    if win:
-  
-        player.mark_win()
-        if player.in_tutorial():
-            player.advance_tutorial()
-    
-    else:
-        
-        player.mark_loss()
 
 
     view(screen,background,player,things)
@@ -2260,6 +2323,24 @@ def main():
     central.add_screen("game")
     central.add_screen("win")
     central.add_screen("retire")
+    
+    login_bg = central.get_state(0).get_background()
+    splash_bg = central.get_state(1).get_background()
+    win_fg = central.get_state(3).get_foreground()
+    retire_bg = central.get_state(4).get_background()
+    x = screen_size[0] // 2 - 50
+    y = screen_size[1] // 4
+    screenprint(login_bg,"Logic Lights",(x,y),36,YELLOW)
+    screenprint(splash_bg,"Logic Lights",(x,y),36,YELLOW)
+    screenprint(win_fg,"Logic Lights",(x,y),36,YELLOW)
+    screenprint(retire_bg,"Logic Lights",(x,y),36,YELLOW)
+    
+    
+    
+    version = make_label("Logic Lights Version "+VERSION,12)
+    pos = screen_size[0] - version.get_size()[0] , screen_size[1] - version.get_size()[1]
+    login_bg.blit(version,pos)
+    
     
     result = True
     
