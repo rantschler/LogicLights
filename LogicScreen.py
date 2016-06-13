@@ -39,8 +39,13 @@ class Screen:
             
         self.size = (900,600)
         
-        self.background = blank_background(self.size,self.colors.get_background())
-        self.foreground = blank_background(self.size,None)
+        self.clear_background()
+        self.clear_foreground()
+    
+    def initialize_background(self):
+        
+        self.clear_background()
+        self.initialize(self.background)
         
     def get_background(self):
         
@@ -50,9 +55,21 @@ class Screen:
         
         return self.foreground
     
-    def set_backgound(self,background):
+    def clear_background(self):
         
-        self.background = background
+        self.background = blank_background(self.size,self.colors.get_background())
+    
+    def clear_foreground(self):
+        
+        self.foreground = blank_background(self.size,None)
+    
+    def set_background(self,new_background):
+        
+        self.background.blit(new_background,(0,0))
+    
+    def set_init(self,function):
+        
+        self.initialize = function
     
     def get_colors(self):
         
@@ -82,8 +99,15 @@ class Screen:
         
         self.buttons.append(button)
    
-    def draw(self,screen):
+    def draw_foreground(self,screen):
+        """ Redraws the (static) foreground. """
         
+        screen.blit(self.foreground,(0,0))
+   
+    def draw(self,screen):
+        """ Draws the objects in the screen.  
+            background -> active elements -> foreground 
+        """
         screen.blit(self.background,(0,0))
         
         if self.area:
@@ -182,7 +206,7 @@ class Message:
     
     def render(self):
         
-        message = self.base + " " + self.end
+        message = self.base + " " + self.end()
         self.message = make_label(message,self.size)
     
     def draw(self,screen):
@@ -335,7 +359,10 @@ def centered(graphic,area):
     size = graphic.get_size()
     position = ( area[0] // 2 - size[0] // 2 , area[1] // 2 - size[1] // 2 )
     container = pg.Surface(area)
+    container.convert()
+    container.fill((1,1,1))
     container.blit(graphic,position)
+    container.set_colorkey((1,1,1))
     
     return container
     

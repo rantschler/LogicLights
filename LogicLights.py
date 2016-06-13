@@ -1336,12 +1336,14 @@ class Game:
     #   3 - Result Screen ( Current puzzle with result )
     #
     
-    def __init__(self):
+    def __init__(self,screen_size):
         
         self.name = ""
         self.player = None
         
         self.size = (900,600)
+        
+        self.display = pg.display.set_mode(self.size,False,32)
         
         scale = 13
         self.scale = Scales( self.size , scale )
@@ -1358,6 +1360,10 @@ class Game:
         
         self.elements = []
     
+    def get_name(self):
+        
+        return self.name
+    
     def get_background(self):
         
         return self.states[self.state].get_background()
@@ -1368,6 +1374,10 @@ class Game:
             state = self.state
             
         return self.states[state]
+    
+    def get_display(self):
+        
+        return self.display
     
     def get_player(self):
         
@@ -1433,6 +1443,20 @@ class Game:
     
         self.factories.append(Factory(LogicAnd,(x,y),self.scale))
     
+    
+    
+    def handle_events(self,events = None):
+        
+        if not events:
+            events = pg.event.get()
+        
+        for event in events:
+            if event.type == QUIT:
+                if self.state == 2:
+                    self.player.mark_loss()
+                if self.state != 0:
+                    self.player.save()
+                exit()
     
     def keystroke(self,stroke):
         
@@ -1599,7 +1623,7 @@ def view(screen,background,avatar = None,things = [],foreground = None):
         avatar.get_tutorial().display_current(screen)
     
     #
-    # Draw all objects above.
+    # Draw all objects aibove.
     #
         
     pg.display.update()
@@ -1609,23 +1633,37 @@ def view(screen,background,avatar = None,things = [],foreground = None):
 #
 # SCREENS
 #
+
+def login_init(background):
+##     
+##     login_bg = central.get_state(0).get_background()
+##     x = screen_size[0] // 2 - 50
+##     y = screen_size[1] // 4
+##     screenprint(login_bg,"Logic Lights",(x,y),36,YELLOW)
+##     version = make_label("Logic Lights Version "+VERSION,12)
+##     pos = screen_size[0] - version.get_size()[0] , screen_size[1] - version.get_size()[1]
+##     
+##     login_bg.blit(version,pos) 
+
+    screen_size = background.get_size()
+    x = screen_size[0] // 2 - 50
+    y = screen_size[1] // 4
+    screenprint(background,"Logic Lights",(x,y),36,YELLOW)
+    version = make_label("Logic Lights Version "+VERSION,12)
+    pos = screen_size[0] - version.get_size()[0] , screen_size[1] - version.get_size()[1]
+    background.blit(version,pos)
     
-def login(screen,game):
+
+def login(game):
     """ Creates the login screen. """
     
     game.logout()
     game.set_state(0)
     middle = game.get_state()
-    middle.clear()
+    middle.initialize_background()
+    screen = game.get_display()
     screen_size = screen.get_size()
     
-    x = screen_size[0] // 2 - 150
-    y = screen_size[1] // 4 + 150
-        
-    name = ""
-    middle.add_label(Message((x,y),"Enter Your Name:",name))
-    middle.get_label(0).set_size(24)
-    middle.get_label(0).render()
     
     ready = False
     
@@ -1636,26 +1674,28 @@ def login(screen,game):
         pg.display.update()
         
         events = pg.event.get()
+        game.handle_events(events)
         for event in events:
-            if event.type == QUIT:
-                exit()
             if event.type == KEYDOWN:
                 if event.key in key_dic:
-                    name += key_dic[event.key]
+                    game.name += key_dic[event.key]
                 elif event.key == K_RETURN:
                     ready = True
                 elif event.key == K_BACKSPACE:
-                    name = name[:-1]
-                middle.get_label(0).update_variable(name)
+                    game.name = game.name[:-1]
+                
                     
-    player = Dude(name)
+    player = Dude(game.name)
     player.initialize()
     
     game.login(player)
         
 
-def retire(screen,player):
+def retire(game):
     """ Marks the losing screen. """
+    
+    screen = game.get_display()
+    player = game.get_player()
     
     time = 0
     limit = 5000
@@ -1696,15 +1736,20 @@ def retire(screen,player):
         pg.display.update()
         
         events = pg.event.get()
+        game.handle_events(events)
         for event in events:
-            if event.type == QUIT:
-                exit()
             if event.type == MOUSEBUTTONDOWN or event.type == KEYDOWN:
                 wait = False
 
-def win(screen,player):
+def win(game):
     """ Creates the winning screen. """
     
+    screen = game.get_display()
+    game.set_state(3)
+    middle = game.get_state()
+    middle.set_background(screen)
+    
+    player = game.get_player()
     
     time = 0
     limit = 5000
@@ -1712,13 +1757,6 @@ def win(screen,player):
     
     wingdings = []
     old_clock = 470
-    
-    player.mark_win()
-    if player.in_tutorial():
-        player.advance_tutorial()
-    
-    background = pg.Surface(screen.get_size())
-    background.blit(screen,(0,0))
     
     screen_size = screen.get_size()
         
@@ -1739,56 +1777,39 @@ def win(screen,player):
         for the_dead in kill_list:
             wingdings.remove(the_dead)
             
-        screen.blit(background,(0,0))
+        middle.draw(screen)
             
-        x = screen_size[0] // 2 - 50
-        y = screen_size[1] // 4
               
         for wingding in wingdings:
             wingding.draw(screen)
-            
-        for n in range(4):
-            
-            x0 , y0 = shift_to_corner((x,y),n)
-                
-            screenprint(screen,"Logic Lights",(x0,y0),36,BLACK)
-         
+        
+        middle.draw_foreground(screen)
+        
+        
+        x = screen_size[0] // 2 - 50
+        y = screen_size[1] // 4
         yellow_mix = mix_colors(BLACK, YELLOW, float(time) / 1000.0)
         white_mix = mix_colors(BLACK, WHITE, float(time) / 1000.0)
-        
         screenprint(screen,"Logic Lights",(x,y),36,yellow_mix)
-        
         x += 12
         y += 150
-        for n in range(4):
-            
-            x0 , y0 = shift_to_corner((x,y),n)
-                
-            screenprint(screen,"You Win!",(x0,y0),36,BLACK)
-                
         screenprint(screen,"You Win!",(x,y),36,white_mix)
 
         pg.display.update()
         
-        
         events = pg.event.get()
+        game.handle_events(events)
         for event in events:
-            
-            if event.type == QUIT:
-                
-                exit()
-                
             if event.type == MOUSEBUTTONDOWN or event.type == KEYDOWN:
-                
                 wait = False
 
-def splash(screen,game):
+def splash(game):
     """ Controls the spash page. """
     
     player = game.get_player()
     player.save()
     
-    
+    screen = game.get_display()
     
     wait = True
     name = player.get_name()
@@ -1826,18 +1847,10 @@ def splash(screen,game):
         
         pg.display.update()
         
-        
         events = pg.event.get()
+        game.handle_events(events)
+        check_pos = pg.mouse.get_pos()
         for event in events:
-            if event.type == QUIT:
-                exit()
-            if event.type == VIDEORESIZE:
-                new_size = event.size
-                screen = pg.display.set_mode(new_size,RESIZABLE,32)
-                background.resize(new_size)
-                field.imprint(draw_field,background)
-                
-            check_pos = pg.mouse.get_pos()
             if event.type == MOUSEBUTTONDOWN: 
                 
                 for level in levels:
@@ -1868,7 +1881,7 @@ def splash(screen,game):
                 cursor = None
 
 
-def game(screen,player):
+def game(game):
     ''' 
     Function that controls the game.
     Includes:   (1) Initialization of variables, objects and lists
@@ -1882,8 +1895,12 @@ def game(screen,player):
     # Initialize screen and clock
     #
     
+    game.set_state(2)
+    middle = game.get_state()
+    screen = game.get_display()
+    player = game.get_player()
     screen_size = screen.get_size()
-    background = blank_background(screen_size,BLACK)
+    background = middle.get_background()
     
     clock = pg.time.Clock()
     
@@ -1982,7 +1999,6 @@ def game(screen,player):
     
     do_update = True
     
-    win = None
     program = []
     #
     # Main loop for MVC game control.
@@ -2013,13 +2029,10 @@ def game(screen,player):
             cursor.set_position(pg.mouse.get_pos())
             
         events = pg.event.get()
+        game.handle_events(events)
+        check_pos = pg.mouse.get_pos() 
         for event in events:
-            if event.type == QUIT:
-                player.mark_loss()
-                player.save()
-                exit()
-            if event.type == MOUSEBUTTONDOWN:
-                check_pos = pg.mouse.get_pos()  
+            if event.type == MOUSEBUTTONDOWN: 
                 
                 if retire_button.is_clicked(check_pos):
                     
@@ -2094,7 +2107,6 @@ def game(screen,player):
                 
             if event.type == MOUSEBUTTONUP:
                 
-                check_pos = pg.mouse.get_pos()
                 do_update = True
                 
                 if cursor and not cursor.gate_type():
@@ -2315,32 +2327,42 @@ def main():
     #
     
     screen_size = (900,600)
-    screen = pg.display.set_mode(screen_size,False,32)
     
-    central = Game()
-    central.add_screen("login")
-    central.add_screen("splash")
-    central.add_screen("game")
-    central.add_screen("win")
-    central.add_screen("retire")
-    
-    login_bg = central.get_state(0).get_background()
-    splash_bg = central.get_state(1).get_background()
-    win_fg = central.get_state(3).get_foreground()
-    retire_bg = central.get_state(4).get_background()
     x = screen_size[0] // 2 - 50
     y = screen_size[1] // 4
-    screenprint(login_bg,"Logic Lights",(x,y),36,YELLOW)
+    x0 = x -100
+    y0 = y + 150
+    
+    central = Game(screen_size)
+    screen = central.get_display()
+    
+    central.add_screen("login")
+    central.get_state(0).set_init(login_init)
+    central.get_state(0).add_label(Message((x0,y0),"Enter Your Name:",central.get_name))
+    central.get_state(0).get_label(0).set_size(24)
+    
+    central.add_screen("splash")
+    splash_bg = central.get_state(1).get_background()
     screenprint(splash_bg,"Logic Lights",(x,y),36,YELLOW)
+    
+    central.add_screen("game")
+    
+    central.add_screen("win")
+    win_fg = central.get_state(3).get_foreground()        
+    for n in range(4):
+            x0 , y0 = shift_to_corner((x,y),n)
+            screenprint(win_fg,"Logic Lights",(x0,y0),36,BLACK)
     screenprint(win_fg,"Logic Lights",(x,y),36,YELLOW)
+    x1 = x + 12
+    y1 = y + 150
+    for n in range(4):
+        x0 , y0 = shift_to_corner((x1,y1),n)
+        screenprint(win_fg,"You Win!",(x0,y0),36,BLACK)
+    screenprint(win_fg,"You Win!",(x1,y1),36,WHITE)
+
+    central.add_screen("retire")
+    retire_bg = central.get_state(4).get_background()
     screenprint(retire_bg,"Logic Lights",(x,y),36,YELLOW)
-    
-    
-    
-    version = make_label("Logic Lights Version "+VERSION,12)
-    pos = screen_size[0] - version.get_size()[0] , screen_size[1] - version.get_size()[1]
-    login_bg.blit(version,pos)
-    
     
     result = True
     
@@ -2349,18 +2371,18 @@ def main():
         
         if not central.get_player():
             
-            login(screen,central)
+            login(central)
         
         else:
         
-            result = game(screen,central.get_player())
+            result = game(central)
 
             if result:
-                win(screen,central.get_player()) 
+                win(central) 
             else:
-                retire(screen,central.get_player())
+                retire(central)
                 
-        splash(screen,central)
+        splash(central)
 
 #
 # START UP
