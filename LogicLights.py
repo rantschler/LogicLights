@@ -54,7 +54,7 @@ class Wingding:
                         random.choice(range(128))+64    ,
                         random.choice(range(128))+64    )
         
-    def update(self):
+    def update(self,dt):
         
         self.x += self.vx
         self.y += self.vy
@@ -1275,6 +1275,27 @@ def shift_to_corner(pos,n):
         y0 = y - 2
 
     return x0 , y0
+    
+def shift_cardinal(pos,n):
+    """ Chooses one of four corners for n; used for backgrounds. """
+    
+    x = pos[0]
+    y = pos[1]
+    
+    if n == 0:
+        x0 = x + 2
+        y0 = y
+    elif n == 1:
+        x0 = x
+        y0 = y + 2
+    elif n == 2:
+        x0 = x - 2
+        y0 = y
+    else:
+        x0 = x
+        y0 = y - 2
+
+    return x0 , y0
 
 
 def find_file(name):
@@ -1295,25 +1316,6 @@ def find_file(name):
 
 
 
-def mix_colors(color1,color2,percent):
-    
-    if percent < 0.0:
-        
-        percent = 0.0
-    
-    elif percent > 1.0:
-        
-        percent = 1.0
-    
-    dR = color2[0] - color1[0]
-    dG = color2[1] - color1[1]
-    dB = color2[2] - color1[2]
-    
-    new_R = int(color1[0] + float(dR) * percent)
-    new_G = int(color1[1] + float(dG) * percent)
-    new_B = int(color1[2] + float(dB) * percent)
-    
-    return ( new_R , new_G , new_B )
 
 
 
@@ -1353,6 +1355,10 @@ class Game:
         
         self.factories = []        
         self.generate_factories()
+        
+        self.time = 0
+        self.clock = None
+        self.animations = []
         
         garbage_location = ( 30 * scale , 16 * scale )
         garbage_size = ( 3 * scale , 4 *  scale )
@@ -1444,7 +1450,43 @@ class Game:
         self.factories.append(Factory(LogicAnd,(x,y),self.scale))
     
     
+    def clear_animations(self):
+        
+        self.animations = []
+        
+    def get_animations(self):
+        
+        return self.animations
+        
+    def reset_timer(self):
+        
+        self.time = 0 
+        self.clock = pg.time.Clock()
     
+    def update(self):
+        
+        if not self.clock:
+            return None
+        
+        bg , mg , fg = self.states[self.state].get_animations()
+        
+        dt = self.clock.tick(30)
+        self.time += dt
+        new_clock = self.time % 500
+        
+        if random.random() < new_clock / 500.0:
+            mg.append(Wingding(pg.mouse.get_pos()))
+        
+        kill_list = []
+        for wingding in mg + fg:
+            wingding.update(dt)
+            if wingding.is_out(self.size):
+                kill_list.append(wingding)
+        for the_dead in kill_list:
+            mg.remove(the_dead)
+
+        
+
     def handle_events(self,events = None):
         
         if not events:
@@ -1752,57 +1794,34 @@ def win(game):
     player = game.get_player()
     
     time = 0
-    limit = 5000
     wait = True
     
-    wingdings = []
-    old_clock = 470
     
     screen_size = screen.get_size()
-        
-    clock = pg.time.Clock()
+    x = screen_size[0] // 2 - 50
+    y = screen_size[1] // 4
+    middle.fg_animations.append(FadeIn("Logic Lights",(x,y),36,YELLOW))
+    x += 12
+    y += 150
+    middle.fg_animations.append(FadeIn("You Win!",(x,y),36,WHITE))
+    
+    game.reset_timer()
     while wait:
         
-        time += clock.tick(30)
-        new_clock = time % 500
-        
-        if random.random() < new_clock / 500.0:
-            wingdings.append(Wingding(pg.mouse.get_pos()))
-        
-        kill_list = []
-        for wingding in wingdings:
-            wingding.update()
-            if wingding.is_out(screen_size):
-                kill_list.append(wingding)
-        for the_dead in kill_list:
-            wingdings.remove(the_dead)
+        game.update()
             
         middle.draw(screen)
-            
-              
-        for wingding in wingdings:
-            wingding.draw(screen)
         
-        middle.draw_foreground(screen)
-        
-        
-        x = screen_size[0] // 2 - 50
-        y = screen_size[1] // 4
-        yellow_mix = mix_colors(BLACK, YELLOW, float(time) / 1000.0)
-        white_mix = mix_colors(BLACK, WHITE, float(time) / 1000.0)
-        screenprint(screen,"Logic Lights",(x,y),36,yellow_mix)
-        x += 12
-        y += 150
-        screenprint(screen,"You Win!",(x,y),36,white_mix)
-
         pg.display.update()
         
         events = pg.event.get()
         game.handle_events(events)
         for event in events:
-            if event.type == MOUSEBUTTONDOWN or event.type == KEYDOWN:
+            if event.type == KEYDOWN:
                 wait = False
-
+        
+    game.clear_animations()
+        
 def splash(game):
     """ Controls the spash page. """
     
@@ -2352,13 +2371,21 @@ def main():
     for n in range(4):
             x0 , y0 = shift_to_corner((x,y),n)
             screenprint(win_fg,"Logic Lights",(x0,y0),36,BLACK)
-    screenprint(win_fg,"Logic Lights",(x,y),36,YELLOW)
+            x0 , y0 = shift_cardinal((x,y),n)
+            screenprint(win_fg,"Logic Lights",(x0,y0),36,BLACK)
+    screenprint(win_fg,"Logic Lights",(x,y),36,BLACK)
     x1 = x + 12
     y1 = y + 150
     for n in range(4):
         x0 , y0 = shift_to_corner((x1,y1),n)
         screenprint(win_fg,"You Win!",(x0,y0),36,BLACK)
-    screenprint(win_fg,"You Win!",(x1,y1),36,WHITE)
+        x0 , y0 = shift_cardinal((x1,y1),n)
+        screenprint(win_fg,"You Win!",(x0,y0),36,BLACK)
+    screenprint(win_fg,"You Win!",(x1,y1),36,BLACK)
+    x2 = 360
+    y2 = 400
+    screenprint(win_fg,"Press Any Key to Continue",(x2,y2),24,WHITE)
+    #central.get_state(3).add_fg_animation()
 
     central.add_screen("retire")
     retire_bg = central.get_state(4).get_background()

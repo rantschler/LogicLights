@@ -1,5 +1,5 @@
 import pygame as pg
-import LogicGates
+from LogicGates import *
 
 SCALE = 13
 WIDTH = 9
@@ -39,6 +39,10 @@ class Screen:
             
         self.size = (900,600)
         
+        self.bg_animations = []
+        self.animations = []
+        self.fg_animations = []
+        
         self.clear_background()
         self.clear_foreground()
     
@@ -54,6 +58,10 @@ class Screen:
     def get_foreground(self):
         
         return self.foreground
+    
+    def get_animations(self):
+        
+        return self.bg_animations,self.animations,self.fg_animations
     
     def clear_background(self):
         
@@ -121,6 +129,20 @@ class Screen:
         for label in self.labels:
             
             label.draw(screen)
+            
+        for thing in self.animations:
+            
+            thing.draw(screen)
+            
+        screen.blit(self.foreground,(0,0))
+            
+        for thing in self.fg_animations:
+            
+            thing.draw(screen)
+        
+        pg.display.update()
+
+
 
 class Scales:
     """ Keeps track of scales on the screen, doing interesting mathematics
@@ -213,8 +235,45 @@ class Message:
         
         self.render()
         screen.blit(self.message,(self.x,self.y))
-        
+
+class FadeIn:
     
+    def __init__(self,message,pos = (0,0),size = 36,color2 = WHITE,color1 = BLACK):
+        
+        
+        self.msg = message
+        
+        self.x = pos[0]
+        self.y = pos[1]
+        
+        self.size = size
+        
+        self.color1 = color1
+        self.color2 = color2
+        self.color = color1
+        
+        self.reset()
+        
+    def reset(self):
+        
+        self.time = 0
+        self.color = self.color1
+    
+    def is_out(self,place):
+        
+        pass
+    
+    def update(self,dt):
+        
+        self.time += dt
+        
+        self.color = mix_colors(self.color1, self.color2, float(self.time) / 1000.0)
+    
+    def draw(self,screen):
+        
+        screenprint(screen,self.msg,(self.x,self.y),self.size,self.color)
+    
+
 class PlayArea:
     
     def __init__(self,corner,area,owner):
@@ -367,5 +426,22 @@ def centered(graphic,area):
     return container
     
     
+def mix_colors(color1,color2,percent):
     
+    if percent < 0.0:
+        
+        percent = 0.0
     
+    elif percent > 1.0:
+        
+        percent = 1.0
+    
+    dR = color2[0] - color1[0]
+    dG = color2[1] - color1[1]
+    dB = color2[2] - color1[2]
+    
+    new_R = int(color1[0] + float(dR) * percent)
+    new_G = int(color1[1] + float(dG) * percent)
+    new_B = int(color1[2] + float(dB) * percent)
+    
+    return ( new_R , new_G , new_B )
