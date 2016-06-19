@@ -27,7 +27,7 @@ key_dic = { K_SPACE : " ", K_MINUS : "-",
             K_u : "U", K_v : "V", K_w : "W", K_x : "X", K_y : "Y",
             K_z : "Z" }
 
-VERSION = "W0.4"
+VERSION = "W0.3d"
 
 #
 # CLASSES
@@ -1345,7 +1345,7 @@ def find_file(name):
         n += 1
         if ord(line[-1]) == 10 and line[17:-1] == name.upper(): 
             return line[:16]
-        elif line[17:] == name.lower():
+        elif line[17:] == name.upper():
             return line[:16]
     
     file.close()
