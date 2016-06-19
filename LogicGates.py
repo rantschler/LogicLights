@@ -1366,7 +1366,12 @@ class Factory(LogicElement):
     def draw(self,screen):
         """ Draws the kind of object the factory creates. """
         
+        pg.draw.rect(screen,COLOR2,((self.x,self.y),(self.w,self.h)),2)
+        
         self.instance.draw(screen)
+        
+        label = make_label(self.instance.gate_type())
+        screen.blit(label,(self.x,self.y+self.h))
     
 class LogicGround(LogicElement):
     """ Will ground out a signal from a switch. """
@@ -2071,6 +2076,24 @@ def draw_and(color1 = None, color2 = None,color3 = None):
     return container
 
 
+def make_label(message,size = 20,color = WHITE,font="Arial"):
+    
+    outputfont = pg.font.SysFont(font,size)
+    
+    return outputfont.render(message,1,color)
+    
+
+def centered(graphic,area):
+    
+    size = graphic.get_size()
+    position = ( area[0] // 2 - size[0] // 2 , area[1] // 2 - size[1] // 2 )
+    container = pg.Surface(area)
+    container.convert()
+    container.fill((1,1,1))
+    container.blit(graphic,position)
+    container.set_colorkey((1,1,1))
+    
+    return container
 
 def screenprint(screen = None,message="",position = [0,0],size = 20,color = WHITE,font = "Arial"):
     ''' Prints a message on the PyGame screen. 

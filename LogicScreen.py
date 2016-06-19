@@ -70,6 +70,14 @@ class Screen:
     def clear_foreground(self):
         
         self.foreground = blank_background(self.size,None)
+        
+    def clear_animations(self):
+        
+        self.animations = []
+        
+        all_animations = self.fg_animations + self.animations + self.bg_animations
+        for item in all_animations:
+            item.clear()
     
     def set_background(self,new_background):
         
@@ -112,10 +120,14 @@ class Screen:
         
         screen.blit(self.foreground,(0,0))
    
-    def draw(self,screen):
+    def draw(self,screen = None):
         """ Draws the objects in the screen.  
             background -> active elements -> foreground 
         """
+        
+        if not screen:
+            screen = self.game.get_display()
+        
         screen.blit(self.background,(0,0))
         
         if self.area:
@@ -259,9 +271,13 @@ class FadeIn:
         self.time = 0
         self.color = self.color1
     
-    def is_out(self,place):
+    def is_outside_of(self,place):
         
         pass
+        
+    def clear(self):
+        
+        self.reset()
     
     def update(self,dt):
         
@@ -316,6 +332,10 @@ class PlayArea:
                     pad.deregister()
                     
                     return wire
+    
+    def draw(self,screen):
+        
+        pg.draw.rect(screen,WHITE,(self.x,self.y,self.w,self.h),2)
     
 
 class ColorScheme:
@@ -406,24 +426,6 @@ def blank_background(size,color = (0,0,0)):
     
     return background
 
-def make_label(message,size = 20,color = WHITE,font="Arial"):
-    
-    outputfont = pg.font.SysFont(font,size)
-    
-    return outputfont.render(message,1,color)
-    
-
-def centered(graphic,area):
-    
-    size = graphic.get_size()
-    position = ( area[0] // 2 - size[0] // 2 , area[1] // 2 - size[1] // 2 )
-    container = pg.Surface(area)
-    container.convert()
-    container.fill((1,1,1))
-    container.blit(graphic,position)
-    container.set_colorkey((1,1,1))
-    
-    return container
     
     
 def mix_colors(color1,color2,percent):

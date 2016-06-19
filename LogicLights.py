@@ -33,6 +33,43 @@ VERSION = "W0.4"
 # CLASSES
 #
 
+class WingdingContainer:
+    
+    def __init__(self,Generated,generator,owner):
+        
+        self.Archetype = Generated
+        
+        self.elements = []
+        
+        self.game = owner
+        
+    def clear(self):
+        
+        self.elements = []
+    
+    def generate(self,pos,time):
+        
+        if time < time:
+            
+            self.elements.append(Generated(pos))
+        
+    def update(self,dt):
+        
+        kill_list = []
+        border = self.owner.get_size()
+        for element in self.elements:
+            element.update(dt)
+            if element.is_outside_of(border):
+                kill_list.append(element)
+        for the_dead in kill_list:
+            self.elements.remove(the_dead)
+        
+    def draw(self,screen):
+        
+        for element in elements:
+            
+            element.draw(screen)
+        
 class Wingding:
     
     def __init__(self,position):
@@ -55,20 +92,21 @@ class Wingding:
                         random.choice(range(128))+64    )
         
     def update(self,dt):
-        
+        """ Moves and rotates wingding. """
         self.x += self.vx
         self.y += self.vy
         self.angle += self.rotation
     
-    def is_out(self,area):
+    def is_outside_of(self,area):
+        """ Checks to see if the wingding is outside of its intended area. """
         
         in_x = -self.radius < self.x < area[0] + self.radius
         in_y = -self.radius < self.y < area[1] + self.radius
         
         return not in_x or not in_y
             
-    
     def create_rotations(self):
+        """ Sets up rotation matrix. """
         
         angle = 2 * math.pi / float(self.sides)
         
@@ -1305,7 +1343,7 @@ def find_file(name):
     n = 0
     for line in file:
         n += 1
-        if ord(line[-1]) == 10 and line[17:-1] == name.lower(): 
+        if ord(line[-1]) == 10 and line[17:-1] == name.upper(): 
             return line[:16]
         elif line[17:] == name.lower():
             return line[:16]
@@ -1313,11 +1351,6 @@ def find_file(name):
     file.close()
     
     return n
-
-
-
-
-
 
 def logout():
     self.owner.logout()
@@ -1367,14 +1400,23 @@ class Game:
         self.elements = []
     
     def get_name(self):
-        
+        """ Returns the name of the current player or name in the login screen 
+            before a player has been created. """
+            
         return self.name
     
+    def get_player(self):
+        """ Returns the player object. """
+        
+        return self.player
     def get_background(self):
+        """ Gets the background of the current game screen. """
         
         return self.states[self.state].get_background()
         
     def get_state(self,state = None):
+        """ Returns a game screen. The specified game screen if state is
+            filled in, otherwise it returns the current screen."""
         
         if not state:
             state = self.state
@@ -1382,37 +1424,39 @@ class Game:
         return self.states[state]
     
     def get_display(self):
+        """ Returns the game window. """
         
         return self.display
     
-    def get_player(self):
-        
-        return self.player
-    
-    
     def set_state(self,state):
+        """ Sets the game state to a particular screen, if it exists. """
         
-        self.state = state
+        if state < len(self.states):
+            self.state = state
         
-    def login(self,player):
-        
-        self.name = player.get_name()
-        self.player = player
-    
-    def logout(self):
-        
-        self.name = ""
-        self.player = None
-    
     def advance(self):
+        """ Moves the game to the next state in the sequence. """
         
         self.state += 1
         
         if state >= len(self.states):
             player.clear_puzzle()
             state = 1
+            
+    def login(self,player):
+        """ Logs a player into the game. """
+        
+        self.name = player.get_name()
+        self.player = player
+    
+    def logout(self):
+        """ Clears player information. """
+        
+        self.name = ""
+        self.player = None
     
     def add_screen(self,screen = None):
+        """ Creates a new screen for the game. """
         
         if type(screen) == str:
             
@@ -1420,15 +1464,8 @@ class Game:
         
         self.states.append(screen)
         
-    def current_screen(self):
-        
-        return self.screens[self.screen]
-    
-    def generate_screens(self):
-        
-        pass
-        
     def generate_factories(self):
+        """ Creates the factories for the game. """
         
         scale = self.scale.get_scale()
         
@@ -1449,21 +1486,30 @@ class Game:
     
         self.factories.append(Factory(LogicAnd,(x,y),self.scale))
     
+    def get_factories(self):
+        """ Returns the factories. """
+        
+        return self.factories
     
     def clear_animations(self):
+        """ Removes all stored animations stored in . """
         
         self.animations = []
+        self.states[self.state].clear_animations()
         
     def get_animations(self):
+        """ Returns the current animations. """
         
         return self.animations
         
     def reset_timer(self):
+        """ Resets the game clock to zero. """
         
         self.time = 0 
         self.clock = pg.time.Clock()
     
     def update(self):
+        """ Updates the game objects according to the clock. """
         
         if not self.clock:
             return None
@@ -1478,16 +1524,15 @@ class Game:
             mg.append(Wingding(pg.mouse.get_pos()))
         
         kill_list = []
-        for wingding in mg + fg:
-            wingding.update(dt)
-            if wingding.is_out(self.size):
-                kill_list.append(wingding)
+        for animation in bg + mg + fg:
+            animation.update(dt)
+            if animation.is_outside_of(self.size):
+                kill_list.append(animation)
         for the_dead in kill_list:
             mg.remove(the_dead)
 
-        
-
     def handle_events(self,events = None):
+        """ Handles input for the current screen. """
         
         if not events:
             events = pg.event.get()
@@ -1650,17 +1695,6 @@ def view(screen,background,avatar = None,things = [],foreground = None):
     
     screenprint(screen,out,(5,575))
     
-    x= 300
-    y = 525
-    dx = 145
-    screenprint(screen,"Not",(x,y))
-    
-    x += dx
-    screenprint(screen,"Or",(x,y))
-    
-    x += dx
-    screenprint(screen,"And",(x,y))
-    
     if avatar.in_tutorial():
         avatar.get_tutorial().display_current(screen)
     
@@ -1711,9 +1745,7 @@ def login(game):
     
     while not ready :
         
-        middle.draw(screen)
-        
-        pg.display.update()
+        middle.draw()
         
         events = pg.event.get()
         game.handle_events(events)
@@ -1733,55 +1765,6 @@ def login(game):
     game.login(player)
         
 
-def retire(game):
-    """ Marks the losing screen. """
-    
-    screen = game.get_display()
-    player = game.get_player()
-    
-    time = 0
-    limit = 5000
-    wait = True
-
-    background = screen
-    screen_size = screen.get_size()
-    
-    clock = pg.time.Clock()
-    
-    while wait and time < limit:
-        
-        time += clock.tick(30)
-        
-        screen.blit(background,(0,0))
-        
-        x = screen_size[0] // 2 - 50
-        y = screen_size[1] // 4
-        
-        for n in range(4):
-            
-            x0 , y0 = shift_to_corner((x,y),n)
-                
-            screenprint(screen,"Logic Lights",(x0,y0),36,BLACK)
-        
-        screenprint(screen,"Logic Lights",(x,y),36,YELLOW)
-        
-        x += 32
-        y += 150
-        for n in range(4):
-            
-            x0 , y0 = shift_to_corner((x,y),n)
-                
-            screenprint(screen,"Retired",(x,y),36,BLACK)
-                
-        screenprint(screen,"Retired",(x,y),36,WHITE)
-       
-        pg.display.update()
-        
-        events = pg.event.get()
-        game.handle_events(events)
-        for event in events:
-            if event.type == MOUSEBUTTONDOWN or event.type == KEYDOWN:
-                wait = False
 
 def win(game):
     """ Creates the winning screen. """
@@ -1796,23 +1779,12 @@ def win(game):
     time = 0
     wait = True
     
-    
-    screen_size = screen.get_size()
-    x = screen_size[0] // 2 - 50
-    y = screen_size[1] // 4
-    middle.fg_animations.append(FadeIn("Logic Lights",(x,y),36,YELLOW))
-    x += 12
-    y += 150
-    middle.fg_animations.append(FadeIn("You Win!",(x,y),36,WHITE))
-    
     game.reset_timer()
     while wait:
         
         game.update()
             
-        middle.draw(screen)
-        
-        pg.display.update()
+        middle.draw()
         
         events = pg.event.get()
         game.handle_events(events)
@@ -1821,7 +1793,36 @@ def win(game):
                 wait = False
         
     game.clear_animations()
+
+def retire(game):
+    """ Creates the winning screen. """
+     
+    screen = game.get_display()
+    game.set_state(4)
+    middle = game.get_state()
+    middle.set_background(screen)
+    
+    player = game.get_player()
+    
+    time = 0
+    wait = True
+    
+    #
+    #  Needs to become part of screen definition.
+    #
+    
+    while wait:
         
+        middle.draw()
+        
+        events = pg.event.get()
+        game.handle_events(events)
+        for event in events:
+            if event.type == KEYDOWN:
+                wait = False
+        
+    game.clear_animations()
+
 def splash(game):
     """ Controls the spash page. """
     
@@ -2352,6 +2353,10 @@ def main():
     x0 = x -100
     y0 = y + 150
     
+    #
+    # Set Up the Game Object
+    #
+    
     central = Game(screen_size)
     screen = central.get_display()
     
@@ -2374,6 +2379,7 @@ def main():
             x0 , y0 = shift_cardinal((x,y),n)
             screenprint(win_fg,"Logic Lights",(x0,y0),36,BLACK)
     screenprint(win_fg,"Logic Lights",(x,y),36,BLACK)
+    central.get_state(3).fg_animations.append(FadeIn("Logic Lights",(x,y),36,YELLOW))
     x1 = x + 12
     y1 = y + 150
     for n in range(4):
@@ -2382,14 +2388,27 @@ def main():
         x0 , y0 = shift_cardinal((x1,y1),n)
         screenprint(win_fg,"You Win!",(x0,y0),36,BLACK)
     screenprint(win_fg,"You Win!",(x1,y1),36,BLACK)
+    central.get_state(3).fg_animations.append(FadeIn("You Win!",(x1,y1),36,WHITE))
     x2 = 360
     y2 = 400
     screenprint(win_fg,"Press Any Key to Continue",(x2,y2),24,WHITE)
-    #central.get_state(3).add_fg_animation()
 
     central.add_screen("retire")
-    retire_bg = central.get_state(4).get_background()
-    screenprint(retire_bg,"Logic Lights",(x,y),36,YELLOW)
+    retire_fg = central.get_state(4).get_foreground()
+    for n in range(4):
+            x0 , y0 = shift_to_corner((x,y),n)
+            screenprint(retire_fg,"Logic Lights",(x0,y0),36,BLACK)
+            x0 , y0 = shift_cardinal((x,y),n)
+            screenprint(retire_fg,"Logic Lights",(x0,y0),36,BLACK)
+    screenprint(retire_fg,"Logic Lights",(x,y),36,YELLOW)
+    x1 += 20
+    for n in range(4):
+        x0 , y0 = shift_to_corner((x1,y1),n)
+        screenprint(retire_fg,"Retired",(x0,y0),36,BLACK)
+        x0 , y0 = shift_cardinal((x1,y1),n)
+        screenprint(retire_fg,"Retired",(x0,y0),36,BLACK)
+    screenprint(retire_fg,"Retired",(x1,y1),36,WHITE)
+    screenprint(retire_fg,"Press Any Key to Continue",(x2,y2),24,WHITE)
     
     result = True
     
