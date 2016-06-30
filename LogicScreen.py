@@ -1,4 +1,5 @@
 import pygame as pg
+from pygame.locals import *
 from LogicGates import *
 
 SCALE = 13
@@ -31,6 +32,7 @@ class Screen:
         
         self.buttons = []
         self.labels = []
+        self.inputs = []
         
         if colors == None:
             self.colors = ColorScheme()
@@ -59,6 +61,10 @@ class Screen:
         
         return self.foreground
     
+    def get_size(self):
+        
+        return self.background.get_size()
+    
     def get_animations(self):
         
         return self.bg_animations,self.animations,self.fg_animations
@@ -73,7 +79,7 @@ class Screen:
         
     def clear_animations(self):
         
-        self.animations = []
+        #self.animations = []
         
         all_animations = self.fg_animations + self.animations + self.bg_animations
         for item in all_animations:
@@ -97,7 +103,7 @@ class Screen:
     
     def get_buttons(self):
         
-        return self.buttons
+        return tuple(self.buttons)
     
     def get_label(self,label):
         
@@ -111,10 +117,27 @@ class Screen:
         
         self.area = PlayArea(corner,area,self)
    
-    def add_buttons(self,button):
+    def add_button(self,button):
         
         self.buttons.append(button)
    
+    def add_input(self,input):
+        
+        self.inputs.append(input)
+        
+    def handle_events(self,event):
+        
+        check_pos = pg.mouse.get_pos()
+        
+        for input in self.inputs:
+            
+            input.check_activation(event)
+        
+        if event.type == MOUSEBUTTONDOWN:
+            for button in self.buttons:
+                if button.is_clicked(check_pos):
+                    button.activate()
+
     def draw_foreground(self,screen):
         """ Redraws the (static) foreground. """
         
@@ -134,10 +157,6 @@ class Screen:
             
             self.area.draw(screen)
             
-        for button in self.buttons:
-            
-            button.draw(screen)
-        
         for label in self.labels:
             
             label.draw(screen)
@@ -145,6 +164,10 @@ class Screen:
         for thing in self.animations:
             
             thing.draw(screen)
+        
+        for button in self.buttons:
+            
+            button.draw(screen)
             
         screen.blit(self.foreground,(0,0))
             
@@ -412,6 +435,46 @@ class ColorScheme:
         return self.text
 
     
+
+class Action:
+    
+    def __init__(self,action):
+        
+        self.action = action
+    
+    def is_activated(self,events):
+        
+        return False
+    
+    def check_activation(self,events):
+        
+        if self.is_activated(events):
+            self.activate()
+    
+    def activate(self):
+        
+        self.action()
+        
+        
+class AnyKey(Action):
+    
+    def is_activated(self,event):
+        
+        if event.type == KEYDOWN:
+            return True
+        
+        return False
+
+class Quit(Action):
+    
+    def is_activated(self,event):
+        
+        if event.type == QUIT:
+            return True
+        
+        return False
+    
+
 def blank_background(size,color = (0,0,0)):
     
     if color == None:

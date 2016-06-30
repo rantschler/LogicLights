@@ -27,7 +27,7 @@ key_dic = { K_SPACE : " ", K_MINUS : "-",
             K_u : "U", K_v : "V", K_w : "W", K_x : "X", K_y : "Y",
             K_z : "Z" }
 
-VERSION = "W0.3d"
+VERSION = "W0.4"
 
 #
 # CLASSES
@@ -35,28 +35,37 @@ VERSION = "W0.3d"
 
 class WingdingContainer:
     
-    def __init__(self,Generated,generator,owner):
+    def __init__(self,Generated,generator=None,owner=None):
         
         self.Archetype = Generated
         
-        self.elements = []
-        
         self.game = owner
+        
+        self.limit = 500.0
+        self.clear()
         
     def clear(self):
         
+        self.time = 0
         self.elements = []
     
-    def generate(self,pos,time):
+    def generate(self,time):
         
-        if time < time:
+        pos = pg.mouse.get_pos()
+        
+        if random.random() < float(self.time)/self.limit:
             
-            self.elements.append(Generated(pos))
+            self.elements.append(self.Archetype(pos))
+            self.time = 0
         
     def update(self,dt):
         
+        self.time += dt
+        
+        self.generate(self.time)
+        
         kill_list = []
-        border = self.owner.get_size()
+        border = self.game.get_size()
         for element in self.elements:
             element.update(dt)
             if element.is_outside_of(border):
@@ -66,7 +75,7 @@ class WingdingContainer:
         
     def draw(self,screen):
         
-        for element in elements:
+        for element in self.elements:
             
             element.draw(screen)
         
@@ -356,7 +365,8 @@ class Button:
             
             screen.blit(self.ornament,(self.x,self.y))
         
-        pg.draw.rect(screen,self.outline,(ulc,size),self.size)
+        if self.outline:
+            pg.draw.rect(screen,self.outline,(ulc,size),self.size)
         
 
 class LevelBox:
@@ -1190,6 +1200,14 @@ class Garbage:
 # FUNCTIONS
 #
 def move_scrollbar(scrollbar,amount):
+    """ Sets up the action for a scrollbar's button object. """
+    
+    #
+    # I don't remember why I did this this way.  It seems like there should
+    # be a more direct method to accomplish this.
+    #
+    # I did test it to see if it is still in use on 6/19/2016, and it is.
+    #
     
     def move():
         
@@ -1198,6 +1216,7 @@ def move_scrollbar(scrollbar,amount):
     return move
 
 def draw_triangle(size,direction = "Up"):
+    """ Draws a triangle to decorate a button. """
     
     square = pg.Surface(size)
     square.convert()
@@ -1315,7 +1334,10 @@ def shift_to_corner(pos,n):
     return x0 , y0
     
 def shift_cardinal(pos,n):
-    """ Chooses one of four corners for n; used for backgrounds. """
+    """ Chooses one of four carndinal directions based on the number n,
+         0 - right , 1 - down , 2 - left , 3 - up
+        Shifts the position by two pixels in that direction.
+        Used for backgrounds. """
     
     x = pos[0]
     y = pos[1]
@@ -1329,15 +1351,23 @@ def shift_cardinal(pos,n):
     elif n == 2:
         x0 = x - 2
         y0 = y
-    else:
+    elif n == 3:
         x0 = x
         y0 = y - 2
+    else:
+        x0 = x
+        y0 = y
 
     return x0 , y0
 
 
 def find_file(name):
-    
+    """ Parses the index to find the file name for the user _name_
+        If the index.txt file has it, this returns a filename.
+        If it does not, this returns a number to use for the next 
+            file.
+        """
+        
     file = open("index.txt",'r')
     
     n = 0
@@ -1352,8 +1382,6 @@ def find_file(name):
     
     return n
 
-def logout():
-    self.owner.logout()
 
 #
 # MVC CLASSES
@@ -1385,13 +1413,13 @@ class Game:
         
         self.state = 0
         self.states = []
+        self.next_state = 1
         
         self.factories = []        
         self.generate_factories()
         
         self.time = 0
         self.clock = None
-        self.animations = []
         
         garbage_location = ( 30 * scale , 16 * scale )
         garbage_size = ( 3 * scale , 4 *  scale )
@@ -1409,12 +1437,18 @@ class Game:
         """ Returns the player object. """
         
         return self.player
+        
     def get_background(self):
         """ Gets the background of the current game screen. """
         
         return self.states[self.state].get_background()
         
-    def get_state(self,state = None):
+    def get_display(self):
+        """ Returns the game window as last rendered. """
+        
+        return self.display
+        
+    def get_screen(self,state = None):
         """ Returns a game screen. The specified game screen if state is
             filled in, otherwise it returns the current screen."""
         
@@ -1423,16 +1457,26 @@ class Game:
             
         return self.states[state]
     
-    def get_display(self):
-        """ Returns the game window. """
+    
+    def get_state(self):
+        """ Returns the current state number. """
         
-        return self.display
+        return self.state
     
     def set_state(self,state):
         """ Sets the game state to a particular screen, if it exists. """
         
         if state < len(self.states):
             self.state = state
+            
+    def set_next_state(self,state):
+        
+        self.next_state = state
+        
+    def mark_loss(self):
+        
+        self.player.mark_loss()
+        self.next_state = 4
         
     def advance(self):
         """ Moves the game to the next state in the sequence. """
@@ -1454,6 +1498,7 @@ class Game:
         
         self.name = ""
         self.player = None
+        self.state = 0
     
     def add_screen(self,screen = None):
         """ Creates a new screen for the game. """
@@ -1493,8 +1538,7 @@ class Game:
     
     def clear_animations(self):
         """ Removes all stored animations stored in . """
-        
-        self.animations = []
+    
         self.states[self.state].clear_animations()
         
     def get_animations(self):
@@ -1508,6 +1552,11 @@ class Game:
         self.time = 0 
         self.clock = pg.time.Clock()
     
+    def advance_state(self):
+        
+        self.clear_animations()
+        self.state = self.next_state
+    
     def update(self):
         """ Updates the game objects according to the clock. """
         
@@ -1518,18 +1567,10 @@ class Game:
         
         dt = self.clock.tick(30)
         self.time += dt
-        new_clock = self.time % 500
-        
-        if random.random() < new_clock / 500.0:
-            mg.append(Wingding(pg.mouse.get_pos()))
         
         kill_list = []
         for animation in bg + mg + fg:
             animation.update(dt)
-            if animation.is_outside_of(self.size):
-                kill_list.append(animation)
-        for the_dead in kill_list:
-            mg.remove(the_dead)
 
     def handle_events(self,events = None):
         """ Handles input for the current screen. """
@@ -1538,13 +1579,17 @@ class Game:
             events = pg.event.get()
         
         for event in events:
-            if event.type == QUIT:
-                if self.state == 2:
-                    self.player.mark_loss()
-                if self.state != 0:
-                    self.player.save()
-                exit()
+            self.states[self.state].handle_events(event)
     
+    def end_game(self):
+        
+        if self.state == 2:
+            self.player.mark_loss()
+        if self.state != 0:
+            self.player.save()
+        exit()
+        
+        
     def keystroke(self,stroke):
         
         if self.state == 0 and key in key_dic:
@@ -1711,15 +1756,6 @@ def view(screen,background,avatar = None,things = [],foreground = None):
 #
 
 def login_init(background):
-##     
-##     login_bg = central.get_state(0).get_background()
-##     x = screen_size[0] // 2 - 50
-##     y = screen_size[1] // 4
-##     screenprint(login_bg,"Logic Lights",(x,y),36,YELLOW)
-##     version = make_label("Logic Lights Version "+VERSION,12)
-##     pos = screen_size[0] - version.get_size()[0] , screen_size[1] - version.get_size()[1]
-##     
-##     login_bg.blit(version,pos) 
 
     screen_size = background.get_size()
     x = screen_size[0] // 2 - 50
@@ -1735,15 +1771,14 @@ def login(game):
     
     game.logout()
     game.set_state(0)
-    middle = game.get_state()
+    middle = game.get_screen()
     middle.initialize_background()
-    screen = game.get_display()
-    screen_size = screen.get_size()
+    game.set_next_state(1)
     
     
     ready = False
     
-    while not ready :
+    while game.get_state() == 0 :
         
         middle.draw()
         
@@ -1754,11 +1789,10 @@ def login(game):
                 if event.key in key_dic:
                     game.name += key_dic[event.key]
                 elif event.key == K_RETURN:
-                    ready = True
+                    game.advance_state()
                 elif event.key == K_BACKSPACE:
                     game.name = game.name[:-1]
                 
-                    
     player = Dude(game.name)
     player.initialize()
     
@@ -1770,76 +1804,45 @@ def win(game):
     """ Creates the winning screen. """
     
     screen = game.get_display()
-    game.set_state(3)
-    middle = game.get_state()
+    middle = game.get_screen()
     middle.set_background(screen)
-    
-    player = game.get_player()
-    
-    time = 0
-    wait = True
+    game.set_next_state(1)
     
     game.reset_timer()
-    while wait:
+    while game.get_state() == 3:
         
         game.update()
-            
         middle.draw()
-        
-        events = pg.event.get()
-        game.handle_events(events)
-        for event in events:
-            if event.type == KEYDOWN:
-                wait = False
-        
-    game.clear_animations()
+        game.handle_events()
 
 def retire(game):
     """ Creates the winning screen. """
      
     screen = game.get_display()
-    game.set_state(4)
-    middle = game.get_state()
+    middle = game.get_screen()
     middle.set_background(screen)
-    
-    player = game.get_player()
-    
-    time = 0
-    wait = True
+    game.set_next_state(1)
     
     #
     #  Needs to become part of screen definition.
     #
     
-    while wait:
-        
+    while game.get_state() == 4:
         middle.draw()
-        
-        events = pg.event.get()
-        game.handle_events(events)
-        for event in events:
-            if event.type == KEYDOWN:
-                wait = False
-        
-    game.clear_animations()
+        game.handle_events()
 
 def splash(game):
     """ Controls the spash page. """
     
+    game.set_state(1)
+    game.set_next_state(2)
+    middle = game.get_screen()
     player = game.get_player()
     player.save()
     
     screen = game.get_display()
     
-    wait = True
     name = player.get_name()
-    
-    button_size = (75,30)
-    logout_button = Button((75,30),(825,0),game)
-    logout_button.set_action(game.logout)
-    logout_button.set_interior(BLACK)
-    logout_button.set_border(WHITE)
-    logout_button.set_ornament(centered(make_label("Logout"),button_size))
    
     screen_size = screen.get_size()
     background = blank_background(screen_size,BLACK)
@@ -1850,7 +1853,7 @@ def splash(game):
     
     cursor = None
     
-    while wait:
+    while game.get_state() == 1:
         
         screen_size = screen.get_size()
         
@@ -1860,7 +1863,8 @@ def splash(game):
         screen.blit(background,(0,0))
         screenprint(screen,"Player: " + name)
         screenprint(screen,"Logic Lights",(x,y),36,YELLOW)
-        logout_button.draw(screen)
+        for button in middle.get_buttons():
+            button.draw(screen)
         
         for level in levels:
             level.draw(screen,(0,0))
@@ -1876,30 +1880,27 @@ def splash(game):
                 for level in levels:
                     if level.is_clicked(check_pos):
                         new_puzzle = level.get_clicked(check_pos)
+                        
                         if new_puzzle != None and new_puzzle != "Tutorial":
                             player.set_level(level.get_level())
                             player.set_puzzle(new_puzzle)
-                            wait = False
+                            game.set_state(2)
                         elif new_puzzle == "Tutorial":
                             if not player.get_tutorial():
                                 player.add_tutorial(Tutorial())
                             player.set_level(player.get_tutorial().get_level())
                             player.set_puzzle(player.get_tutorial().get_puzzle())
                             player.flag_tutorial()
-                            wait = False
+                            game.set_state(2)
                     else:
                         level.click_internals(check_pos)
-                
-                if logout_button.is_clicked(check_pos):
-                
-                    logout_button.activate()
-                
-                    return "Logout"
-                
-            if event.type == MOUSEBUTTONUP:
-                
-                cursor = None
-
+##                 
+##                 for button in middle.get_buttons():
+##                     
+##                     if button.is_clicked(check_pos):
+##                 
+##                             button.activate()
+                    
 
 def game(game):
     ''' 
@@ -1916,7 +1917,7 @@ def game(game):
     #
     
     game.set_state(2)
-    middle = game.get_state()
+    middle = game.get_screen()
     screen = game.get_display()
     player = game.get_player()
     screen_size = screen.get_size()
@@ -1930,12 +1931,6 @@ def game(game):
     
     player.clear_result()
     
-    button_size = (75,30)
-    retire_button = Button(button_size,(0,525))
-    retire_button.set_action(player.mark_loss)
-    retire_button.set_interior(BLACK)
-    retire_button.set_border(WHITE)
-    retire_button.set_ornament(centered(make_label("Retire"),button_size))
     
     #
     # Active Area
@@ -2035,7 +2030,7 @@ def game(game):
         ## Send objects to the view function.
         #
         
-        things = buttons + program + factories + lights + wires + [garbage,retire_button]
+        things = factories + buttons + program + lights + wires + [garbage] + list(middle.get_buttons())
         view(screen,background,player,things)
         
         #
@@ -2047,16 +2042,19 @@ def game(game):
         if cursor:
             
             cursor.set_position(pg.mouse.get_pos())
-            
+             
         events = pg.event.get()
         game.handle_events(events)
         check_pos = pg.mouse.get_pos() 
         for event in events:
             if event.type == MOUSEBUTTONDOWN: 
                 
-                if retire_button.is_clicked(check_pos):
+                for button in middle.get_buttons():
                     
-                    retire_button.activate()
+                    if button.is_clicked(check_pos):
+                    
+                        button.activate()
+                        game.set_next_state(4)
                 
                 for object in buttons:
                     
@@ -2330,10 +2328,12 @@ def game(game):
                     player.mark_win()
                     if player.in_tutorial():
                         player.advance_tutorial()
-                    
+                    game.set_next_state(3)
             do_update = False
 
-
+    game.advance_state()
+    
+    things = factories + buttons + program + lights + wires + [garbage]
     view(screen,background,player,things)
 
     return win
@@ -2350,36 +2350,74 @@ def main():
     
     x = screen_size[0] // 2 - 50
     y = screen_size[1] // 4
-    x0 = x -100
+    x0 = x - 100
     y0 = y + 150
+    
+    central = Game(screen_size)
+    
+    #
+    # Create Buttons
+    #
+    
+    halt_size = (300,30)
+    halt_pos = (325,400)
+    halt_msg = "Press Any Key to Continue"
+    halt_button = Button(halt_size,halt_pos,central)
+    halt_button.set_action(central.advance_state)
+    halt_button.set_interior(BLACK)
+    halt_button.set_border(WHITE)
+    halt_button.set_ornament(centered(make_label(halt_msg),halt_size))
+    
+    button_size = (75,30)
+    retire_pos = (0,525)
+    retire_button = Button(button_size,(0,525))
+    retire_button.set_action(central.mark_loss)
+    retire_button.set_interior(BLACK)
+    retire_button.set_border(WHITE)
+    retire_button.set_ornament(centered(make_label("Retire"),button_size))
+    
+    logout_pos = (825,0)
+    logout_button = Button(button_size,logout_pos,game)
+    logout_button.set_action(central.logout)
+    logout_button.set_interior(BLACK)
+    logout_button.set_border(WHITE)
+    logout_button.set_ornament(centered(make_label("Logout"),button_size))
     
     #
     # Set Up the Game Object
     #
     
-    central = Game(screen_size)
     screen = central.get_display()
     
     central.add_screen("login")
-    central.get_state(0).set_init(login_init)
-    central.get_state(0).add_label(Message((x0,y0),"Enter Your Name:",central.get_name))
-    central.get_state(0).get_label(0).set_size(24)
+    central.get_screen(0).set_init(login_init)
+    central.get_screen(0).add_label(Message((x0,y0),"Enter Your Name:",central.get_name))
+    central.get_screen(0).get_label(0).set_size(24)
+    central.get_screen(0).add_input(Quit(central.end_game))
+
     
     central.add_screen("splash")
-    splash_bg = central.get_state(1).get_background()
+    splash_bg = central.get_screen(1).get_background()
     screenprint(splash_bg,"Logic Lights",(x,y),36,YELLOW)
+    central.get_screen(1).add_button(logout_button)
+    central.get_screen(1).add_input(Quit(central.end_game))
+
     
     central.add_screen("game")
+    central.get_screen(2).add_button(retire_button)
+    central.get_screen(2).add_input(Quit(central.end_game))
+
     
     central.add_screen("win")
-    win_fg = central.get_state(3).get_foreground()        
+    central.get_screen(3).animations.append(WingdingContainer(Wingding,None,central.get_screen(3)))
+    win_fg = central.get_screen(3).get_foreground()        
     for n in range(4):
             x0 , y0 = shift_to_corner((x,y),n)
             screenprint(win_fg,"Logic Lights",(x0,y0),36,BLACK)
             x0 , y0 = shift_cardinal((x,y),n)
             screenprint(win_fg,"Logic Lights",(x0,y0),36,BLACK)
     screenprint(win_fg,"Logic Lights",(x,y),36,BLACK)
-    central.get_state(3).fg_animations.append(FadeIn("Logic Lights",(x,y),36,YELLOW))
+    central.get_screen(3).fg_animations.append(FadeIn("Logic Lights",(x,y),36,YELLOW))
     x1 = x + 12
     y1 = y + 150
     for n in range(4):
@@ -2388,13 +2426,13 @@ def main():
         x0 , y0 = shift_cardinal((x1,y1),n)
         screenprint(win_fg,"You Win!",(x0,y0),36,BLACK)
     screenprint(win_fg,"You Win!",(x1,y1),36,BLACK)
-    central.get_state(3).fg_animations.append(FadeIn("You Win!",(x1,y1),36,WHITE))
-    x2 = 360
-    y2 = 400
-    screenprint(win_fg,"Press Any Key to Continue",(x2,y2),24,WHITE)
+    central.get_screen(3).fg_animations.append(FadeIn("You Win!",(x1,y1),36,WHITE))
+    central.get_screen(3).add_button(halt_button)
+    central.get_screen(3).add_input(AnyKey(central.advance_state))
+    central.get_screen(3).add_input(Quit(central.end_game))
 
     central.add_screen("retire")
-    retire_fg = central.get_state(4).get_foreground()
+    retire_fg = central.get_screen(4).get_foreground()
     for n in range(4):
             x0 , y0 = shift_to_corner((x,y),n)
             screenprint(retire_fg,"Logic Lights",(x0,y0),36,BLACK)
@@ -2408,22 +2446,26 @@ def main():
         x0 , y0 = shift_cardinal((x1,y1),n)
         screenprint(retire_fg,"Retired",(x0,y0),36,BLACK)
     screenprint(retire_fg,"Retired",(x1,y1),36,WHITE)
-    screenprint(retire_fg,"Press Any Key to Continue",(x2,y2),24,WHITE)
+    central.get_screen(4).add_button(halt_button)
+    central.get_screen(4).add_input(AnyKey(central.advance_state))
+    central.get_screen(4).add_input(Quit(central.end_game))
     
     result = True
     
+    
+    central.set_state(0)
     while True:
         
         
-        if not central.get_player():
+        if central.get_state() == 0:
             
             login(central)
         
         else:
         
-            result = game(central)
+            game(central)
 
-            if result:
+            if central.get_state() == 3:
                 win(central) 
             else:
                 retire(central)
