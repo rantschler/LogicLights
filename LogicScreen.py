@@ -34,6 +34,8 @@ class Screen:
         self.labels = []
         self.inputs = []
         
+        self.levels_active = False
+        
         if colors == None:
             self.colors = ColorScheme()
         else:
@@ -52,6 +54,11 @@ class Screen:
         
         self.clear_background()
         self.initialize(self.background)
+        
+    def activate_levels(self):
+        
+        self.levels_active = True
+        
         
     def get_background(self):
         
@@ -126,17 +133,39 @@ class Screen:
         self.inputs.append(input)
         
     def handle_events(self,event):
-        
+        game = self.game
+        player = self.game.get_player()
         check_pos = pg.mouse.get_pos()
         
         for input in self.inputs:
             
             input.check_activation(event)
-        
+                
         if event.type == MOUSEBUTTONDOWN:
+            
+            if self.levels_active:
+        
+                for level in self.game.get_levels():
+                    if level.is_clicked(check_pos):
+                        new_puzzle = level.get_clicked(check_pos)                        
+                        if new_puzzle != None and new_puzzle != "Tutorial":
+                            player.set_level(level.get_level())
+                            player.set_puzzle(new_puzzle)
+                            game.set_state(2)
+                        elif new_puzzle == "Tutorial":
+                            if not player.get_tutorial():
+                                player.new_tutorial()
+                            player.set_level(player.get_tutorial().get_level())
+                            player.set_puzzle(player.get_tutorial().get_puzzle())
+                            player.flag_tutorial()
+                            game.set_state(2)
+                    else:
+                         level.click_internals(check_pos)
+                         
             for button in self.buttons:
                 if button.is_clicked(check_pos):
                     button.activate()
+                    
 
     def draw_foreground(self,screen):
         """ Redraws the (static) foreground. """
@@ -164,6 +193,12 @@ class Screen:
         for thing in self.animations:
             
             thing.draw(screen)
+    
+        if self.levels_active:
+        
+            for level in self.game.get_levels():
+                
+                level.draw(screen,(0,0))
         
         for button in self.buttons:
             
@@ -176,8 +211,6 @@ class Screen:
             thing.draw(screen)
         
         pg.display.update()
-
-
 
 class Scales:
     """ Keeps track of scales on the screen, doing interesting mathematics
@@ -455,7 +488,6 @@ class Action:
         
         self.action()
         
-        
 class AnyKey(Action):
     
     def is_activated(self,event):
@@ -474,6 +506,80 @@ class Quit(Action):
         
         return False
     
+class SingleKey(Action):
+    
+    def __init__(self,key_to_action_dictionary):
+        """ key_to_action dictionary is a dictionary with PyGame key events
+            (e.g., K_RETURN) as keys and the ... are object methods. 
+        """
+        
+        self.responses = key_to_action_dictionary
+        
+        self.activations = []
+    
+    def is_activated(self,event):
+        
+        if event.type == KEYDOWN:
+            for thing in self.responses:
+                if event.key == thing:
+                    self.activations.append(self.responses[thing])
+                    
+        if self.activations:
+            return True
+        else:
+            return False
+
+    def activate(self):
+        
+        for action in self.activations:
+            action()
+            
+        self.activations = []
+
+class KeyboardInput(Action):
+    
+    def __init__(self,thing):
+        """ variable is the object with a string-valued name property 
+            to modify.  Uses thing.get_name() and thing.set_name()
+            methods. 
+        """
+        
+        self.thing = thing
+        
+        self.next_keys = []
+        
+        self.key_dic = { K_SPACE : " ", K_MINUS : "-",
+            K_0 : "0", K_1 : "1", K_2 : "2", K_3 : "3", K_4 : "4",
+            K_5 : "5", K_6 : "6", K_7 : "W", K_8 : "8", K_9 : "9 ",
+            K_a : "A", K_b : "B", K_c : "C", K_d : "D", K_e : "E",
+            K_f : "F", K_g : "G", K_h : "H", K_i : "I", K_j : "J",
+            K_k : "K", K_l : "L", K_m : "M", K_n : "N", K_o : "O",
+            K_p : "P", K_q : "Q", K_r : "R", K_s : "S", K_t : "T",
+            K_u : "U", K_v : "V", K_w : "W", K_x : "X", K_y : "Y",
+            K_z : "Z" }
+        
+    def is_activated(self,event):
+        
+        if event.type == KEYDOWN:
+            self.next_keys.append(event.key)
+            return True
+        
+        return False
+    
+    def activate(self):
+        
+        variable = self.thing.get_name()
+        
+        for key in self.next_keys:
+            if key in self.key_dic:
+                variable += self.key_dic[key]
+            elif key == K_BACKSPACE:
+                variable = variable[:-1]
+        self.thing.set_name(variable)
+        
+        self.next_keys = []
+
+
 
 def blank_background(size,color = (0,0,0)):
     

@@ -17,16 +17,6 @@ from pygame.locals import *
 import pygame as pg
 from sys import exit
 
-key_dic = { K_SPACE : " ", K_MINUS : "-",
-            K_0 : "0", K_1 : "1", K_2 : "2", K_3 : "3", K_4 : "4",
-            K_5 : "5", K_6 : "6", K_7 : "W", K_8 : "8", K_9 : "9 ",
-            K_a : "A", K_b : "B", K_c : "C", K_d : "D", K_e : "E",
-            K_f : "F", K_g : "G", K_h : "H", K_i : "I", K_j : "J",
-            K_k : "K", K_l : "L", K_m : "M", K_n : "N", K_o : "O",
-            K_p : "P", K_q : "Q", K_r : "R", K_s : "S", K_t : "T",
-            K_u : "U", K_v : "V", K_w : "W", K_x : "X", K_y : "Y",
-            K_z : "Z" }
-
 VERSION = "W0.4"
 
 #
@@ -560,9 +550,7 @@ class LevelBox:
             
             if self.scrollbar.is_clicked(in_levelbox):
                 
-                return self.scrollbar.scroll_to(in_levelbox)
-                
-        return None
+                self.scrollbar.scroll_to(in_levelbox)
         
     def set_puzzle_value(self,puzzle,score):
         """ Returns the result of a paticular puzzle. """
@@ -972,9 +960,9 @@ class Dude:
     # Tutorial Functions
     #
 
-    def add_tutorial(self,tutorial):
+    def new_tutorial(self):
         
-        self.tutorial = tutorial
+        self.tutorial = Tutorial()
     
     def in_tutorial(self):
         
@@ -1433,6 +1421,10 @@ class Game:
             
         return self.name
     
+    def get_levels(self):
+        
+        return self.player.get_levels()
+    
     def get_player(self):
         """ Returns the player object. """
         
@@ -1457,6 +1449,9 @@ class Game:
             
         return self.states[state]
     
+    def set_name(self,name):
+        
+        self.name = name
     
     def get_state(self):
         """ Returns the current state number. """
@@ -1483,14 +1478,15 @@ class Game:
         
         self.state += 1
         
-        if state >= len(self.states):
+        if self.state >= len(self.states):
             player.clear_puzzle()
-            state = 1
+            self.state = 1
             
-    def login(self,player):
+    def login(self):
         """ Logs a player into the game. """
         
-        self.name = player.get_name()
+        player = Dude(self.name)
+        player.initialize()
         self.player = player
     
     def logout(self):
@@ -1756,7 +1752,7 @@ def view(screen,background,avatar = None,things = [],foreground = None):
 #
 
 def login_init(background):
-
+    
     screen_size = background.get_size()
     x = screen_size[0] // 2 - 50
     y = screen_size[1] // 4
@@ -1770,36 +1766,16 @@ def login(game):
     """ Creates the login screen. """
     
     game.logout()
-    game.set_state(0)
+    
     middle = game.get_screen()
-    middle.initialize_background()
     game.set_next_state(1)
     
-    
-    ready = False
-    
     while game.get_state() == 0 :
-        
         middle.draw()
-        
-        events = pg.event.get()
-        game.handle_events(events)
-        for event in events:
-            if event.type == KEYDOWN:
-                if event.key in key_dic:
-                    game.name += key_dic[event.key]
-                elif event.key == K_RETURN:
-                    game.advance_state()
-                elif event.key == K_BACKSPACE:
-                    game.name = game.name[:-1]
-                
-    player = Dude(game.name)
-    player.initialize()
+        game.handle_events()
     
-    game.login(player)
+    game.login()
         
-
-
 def win(game):
     """ Creates the winning screen. """
     
@@ -1810,7 +1786,6 @@ def win(game):
     
     game.reset_timer()
     while game.get_state() == 3:
-        
         game.update()
         middle.draw()
         game.handle_events()
@@ -1822,85 +1797,21 @@ def retire(game):
     middle = game.get_screen()
     middle.set_background(screen)
     game.set_next_state(1)
-    
-    #
-    #  Needs to become part of screen definition.
-    #
-    
+
     while game.get_state() == 4:
         middle.draw()
         game.handle_events()
 
-def splash(game):
+def selection(game):
     """ Controls the spash page. """
     
-    game.set_state(1)
     game.set_next_state(2)
     middle = game.get_screen()
-    player = game.get_player()
-    player.save()
-    
-    screen = game.get_display()
-    
-    name = player.get_name()
-   
-    screen_size = screen.get_size()
-    background = blank_background(screen_size,BLACK)
-    
-    box = 0
-        
-    levels = player.get_levels()
-    
-    cursor = None
     
     while game.get_state() == 1:
-        
-        screen_size = screen.get_size()
-        
-        x = screen_size[0] // 2 - 50
-        y = screen_size[1] // 4
-        
-        screen.blit(background,(0,0))
-        screenprint(screen,"Player: " + name)
-        screenprint(screen,"Logic Lights",(x,y),36,YELLOW)
-        for button in middle.get_buttons():
-            button.draw(screen)
-        
-        for level in levels:
-            level.draw(screen,(0,0))
-        
-        pg.display.update()
-        
-        events = pg.event.get()
-        game.handle_events(events)
-        check_pos = pg.mouse.get_pos()
-        for event in events:
-            if event.type == MOUSEBUTTONDOWN: 
-                
-                for level in levels:
-                    if level.is_clicked(check_pos):
-                        new_puzzle = level.get_clicked(check_pos)
-                        
-                        if new_puzzle != None and new_puzzle != "Tutorial":
-                            player.set_level(level.get_level())
-                            player.set_puzzle(new_puzzle)
-                            game.set_state(2)
-                        elif new_puzzle == "Tutorial":
-                            if not player.get_tutorial():
-                                player.add_tutorial(Tutorial())
-                            player.set_level(player.get_tutorial().get_level())
-                            player.set_puzzle(player.get_tutorial().get_puzzle())
-                            player.flag_tutorial()
-                            game.set_state(2)
-                    else:
-                        level.click_internals(check_pos)
-##                 
-##                 for button in middle.get_buttons():
-##                     
-##                     if button.is_clicked(check_pos):
-##                 
-##                             button.activate()
-                    
+
+        middle.draw()
+        game.handle_events()
 
 def game(game):
     ''' 
@@ -1982,8 +1893,8 @@ def game(game):
     #
     #
 
-    col = [YELLOW,DARK_GRAY,GRAY]
-    
+##     col = [YELLOW,DARK_GRAY,GRAY]
+##     
     x = 50
     y = area_corner[1]
     
@@ -2335,25 +2246,24 @@ def game(game):
     
     things = factories + buttons + program + lights + wires + [garbage]
     view(screen,background,player,things)
+    player.save()
 
     return win
 
-def main():
-    
-    ''' Function that controls the program state.'''    
+
+def setup(game):
+    """ Sets up the game screens. """
     
     #
     # Initialize screen and clock
     #
     
-    screen_size = (900,600)
+    screen_size = game.get_display().get_size()
     
     x = screen_size[0] // 2 - 50
     y = screen_size[1] // 4
     x0 = x - 100
     y0 = y + 150
-    
-    central = Game(screen_size)
     
     #
     # Create Buttons
@@ -2362,8 +2272,8 @@ def main():
     halt_size = (300,30)
     halt_pos = (325,400)
     halt_msg = "Press Any Key to Continue"
-    halt_button = Button(halt_size,halt_pos,central)
-    halt_button.set_action(central.advance_state)
+    halt_button = Button(halt_size,halt_pos,game)
+    halt_button.set_action(game.advance_state)
     halt_button.set_interior(BLACK)
     halt_button.set_border(WHITE)
     halt_button.set_ornament(centered(make_label(halt_msg),halt_size))
@@ -2371,53 +2281,58 @@ def main():
     button_size = (75,30)
     retire_pos = (0,525)
     retire_button = Button(button_size,(0,525))
-    retire_button.set_action(central.mark_loss)
+    retire_button.set_action(game.mark_loss)
     retire_button.set_interior(BLACK)
     retire_button.set_border(WHITE)
     retire_button.set_ornament(centered(make_label("Retire"),button_size))
     
     logout_pos = (825,0)
     logout_button = Button(button_size,logout_pos,game)
-    logout_button.set_action(central.logout)
+    logout_button.set_action(game.logout)
     logout_button.set_interior(BLACK)
     logout_button.set_border(WHITE)
     logout_button.set_ornament(centered(make_label("Logout"),button_size))
+    
+    quit_decoration = Quit(game.end_game)
     
     #
     # Set Up the Game Object
     #
     
-    screen = central.get_display()
+    screen = game.get_display()
     
-    central.add_screen("login")
-    central.get_screen(0).set_init(login_init)
-    central.get_screen(0).add_label(Message((x0,y0),"Enter Your Name:",central.get_name))
-    central.get_screen(0).get_label(0).set_size(24)
-    central.get_screen(0).add_input(Quit(central.end_game))
+    game.add_screen("login")
+    game.get_screen(0).set_init(login_init)
+    game.get_screen(0).initialize_background()
+    game.get_screen(0).add_label(Message((x0,y0),"Enter Your Name:",game.get_name))
+    game.get_screen(0).get_label(0).set_size(24)
+    game.get_screen(0).add_input(quit_decoration)
+    game.get_screen(0).add_input(SingleKey({K_RETURN:game.advance_state}))
+    game.get_screen(0).add_input(KeyboardInput(game))
 
     
-    central.add_screen("splash")
-    splash_bg = central.get_screen(1).get_background()
+    game.add_screen("selection")
+    splash_bg = game.get_screen(1).get_background()
     screenprint(splash_bg,"Logic Lights",(x,y),36,YELLOW)
-    central.get_screen(1).add_button(logout_button)
-    central.get_screen(1).add_input(Quit(central.end_game))
+    game.get_screen(1).add_button(logout_button)
+    game.get_screen(1).add_input(quit_decoration)
+    game.get_screen(1).activate_levels()
 
     
-    central.add_screen("game")
-    central.get_screen(2).add_button(retire_button)
-    central.get_screen(2).add_input(Quit(central.end_game))
+    game.add_screen("game")
+    game.get_screen(2).add_button(retire_button)
+    game.get_screen(2).add_input(quit_decoration)
 
-    
-    central.add_screen("win")
-    central.get_screen(3).animations.append(WingdingContainer(Wingding,None,central.get_screen(3)))
-    win_fg = central.get_screen(3).get_foreground()        
+    game.add_screen("win")
+    game.get_screen(3).animations.append(WingdingContainer(Wingding,None,game.get_screen(3)))
+    win_fg = game.get_screen(3).get_foreground()        
     for n in range(4):
             x0 , y0 = shift_to_corner((x,y),n)
             screenprint(win_fg,"Logic Lights",(x0,y0),36,BLACK)
             x0 , y0 = shift_cardinal((x,y),n)
             screenprint(win_fg,"Logic Lights",(x0,y0),36,BLACK)
     screenprint(win_fg,"Logic Lights",(x,y),36,BLACK)
-    central.get_screen(3).fg_animations.append(FadeIn("Logic Lights",(x,y),36,YELLOW))
+    game.get_screen(3).fg_animations.append(FadeIn("Logic Lights",(x,y),36,YELLOW))
     x1 = x + 12
     y1 = y + 150
     for n in range(4):
@@ -2426,13 +2341,13 @@ def main():
         x0 , y0 = shift_cardinal((x1,y1),n)
         screenprint(win_fg,"You Win!",(x0,y0),36,BLACK)
     screenprint(win_fg,"You Win!",(x1,y1),36,BLACK)
-    central.get_screen(3).fg_animations.append(FadeIn("You Win!",(x1,y1),36,WHITE))
-    central.get_screen(3).add_button(halt_button)
-    central.get_screen(3).add_input(AnyKey(central.advance_state))
-    central.get_screen(3).add_input(Quit(central.end_game))
+    game.get_screen(3).fg_animations.append(FadeIn("You Win!",(x1,y1),36,WHITE))
+    game.get_screen(3).add_button(halt_button)
+    game.get_screen(3).add_input(AnyKey(game.advance_state))
+    game.get_screen(3).add_input(quit_decoration)
 
-    central.add_screen("retire")
-    retire_fg = central.get_screen(4).get_foreground()
+    game.add_screen("retire")
+    retire_fg = game.get_screen(4).get_foreground()
     for n in range(4):
             x0 , y0 = shift_to_corner((x,y),n)
             screenprint(retire_fg,"Logic Lights",(x0,y0),36,BLACK)
@@ -2446,16 +2361,25 @@ def main():
         x0 , y0 = shift_cardinal((x1,y1),n)
         screenprint(retire_fg,"Retired",(x0,y0),36,BLACK)
     screenprint(retire_fg,"Retired",(x1,y1),36,WHITE)
-    central.get_screen(4).add_button(halt_button)
-    central.get_screen(4).add_input(AnyKey(central.advance_state))
-    central.get_screen(4).add_input(Quit(central.end_game))
+    game.get_screen(4).add_button(halt_button)
+    game.get_screen(4).add_input(AnyKey(game.advance_state))
+    game.get_screen(4).add_input(quit_decoration)
     
     result = True
     
+
+def main():
+    
+    ''' Function that controls the program state.'''    
+    
+    screen_size = (900,600)
+    
+    central = Game(screen_size)
+    
+    setup(central)
     
     central.set_state(0)
     while True:
-        
         
         if central.get_state() == 0:
             
@@ -2470,7 +2394,7 @@ def main():
             else:
                 retire(central)
                 
-        splash(central)
+        selection(central)
 
 #
 # START UP
