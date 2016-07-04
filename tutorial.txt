@@ -1,0 +1,51 @@
+/B/ This file includes the information for the tutorial for the Logic Lights demo.
+/B/ LEVELS 6
+/0/ LVL 1 
+/0/ PZL 2
+/0/ MSG 400 050 000 000 Welcome to Logic Lights! Click on the message boxes in the tutorial.
+/0/ MSG 350 300 000 000 Logic Lights is a game where you try to match the pattern of a single light as you click the switches on the left had side of the screen.
+/0/ MSG 150 100 -99 100 Click the switch on the left a few times.
+/0/ MSG 615 070 140 075 Did you notice that the red light is on when the switch is in the on position and off when it is in the off position?
+/0/ MSG 450 225 000 000 You want to match this behavior by wiring the light to the switch.
+/0/ MSG 700 265 065 -69 To wire the light start by clicking and holding the terminal on the light.
+/0/ MSG 140 340 -99 -99 Then drag it to the terminal on the switch, and you'll be done.
+/1/ LVL 1
+/1/ PZL 1
+/1/ MSG 400 050 000 000 For the next puzzle when you click the switch the light is in the opposite state:
+/1/ MSG 550 150 000 000 It's on when the switch is off and its off when the switch is on.
+/1/ MSG 250 300 000 100 Now you'll need to use the logic gates below to program the light.  Pull the Not-gate out and place it in the center of the screen.
+/1/ MSG 400 050 000 000 You'll now need to connect each end of the Not-gate to the correct terminal.
+/1/ MSG 090 315 -75 -69 The Not's input (left) is connects with the Switch's output...
+/1/ MSG 680 300 100 -99 ...and the Not's output connects to the Light's input.
+/1/ MSG 400 200 000 000 And then you win. 
+/2/ LVL 2  
+/2/ PZL 14
+/2/ MSG 400 050 000 000 Now let's try two switches.  Click both of the switches to figure out the pattern.
+/2/ MSG 200 200 000 000 The light is almost always on, except when both of the switches are off.  
+/2/ MSG 400 300 000 100 This is exactly the behavior of the Or-gate.  Place one in the center of the screen.
+/2/ MSG 200 100 000 000 Next, wire up one Or-gate input to each switch and the Or-gate's output to the light.
+/2/ MSG 400 200 000 000 Woo! 
+/3/ LVL 2
+/3/ PZL 8
+/3/ MSG 400 050 000 000 Here's another two-switch puzzle.  What's the pattern going to be?
+/3/ MSG 600 173 114 000 Clicking the switches shows that this light only lights up when both of the switches are on.
+/3/ MSG 550 300 000 100 This is exactly the behavior of the And-gate.  Wire one up.
+/3/ MSG 400 200 000 000 And you win again. 
+/4/ LVL 1
+/4/ PZL 3
+/4/ MSG 400 050 000 000 This puzzle takes a little more thought even though it has only one switch.  Click the switch to see the pattern.
+/4/ MSG 715 290 050 -99 The light is always on, so you have to think of a way to tell the light to turn on when the switch is in either state.
+/4/ MSG 450 100 000 000 The way to think of it is that the light is on when the switch is on or the switch is off.
+/4/ MSG 400 315 000 100 So, you need an Or-gate that connects directly to the light...
+/4/ MSG 075 100 -50 075 ...and you need to connect the switch directly to one terminal of the Or-gate...
+/4/ MSG 250 320 000 100 ...and a Not-gate needs to connect to the the other one.
+/4/ MSG 500 250 200 -75 To wire the Not-gate to the switch you have to start at the Not's input and draw a wire to the Switch's output.
+/4/ MSG 400 200 000 000 And then you'll be done!
+/5/ LVL 2
+/5/ PZL 9
+/5/ MSG 400 050 000 000 Finally, you should know that you can use more than one copy of a given logic element.
+/5/ MSG 100 200 000 000 Click the switches on this puzzle to see the pattern.
+/5/ MSG 600 100 150 050 The light is now on when the two switches agree, but off when they disagree.
+/5/ MSG 400 350 000 000 There are several ways to do it, but they all require two of at least one of the three-terminal gates.
+/5/ MSG 800 300 000 000 Give it a go!
+/E/
